@@ -1,0 +1,38 @@
+# OS & IDE Files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+*.iml
+.vscode/
+
+# Flutter / Dart Build Artifacts (for future tadamon_attendance_app/)
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+tadamon_attendance_app/.dart_tool/
+tadamon_attendance_app/build/
+tadamon_attendance_app/android/.gradle/
+tadamon_attendance_app/android/local.properties
+tadamon_attendance_app/windows/flutter/ephemeral/
+
+# Laravel Artifacts (for future monaz_license_portal/)
+monaz_license_portal/vendor/
+monaz_license_portal/node_modules/
+monaz_license_portal/.env
+monaz_license_portal/.env.backup
+monaz_license_portal/.env.production
+monaz_license_portal/storage/*.key
+monaz_license_portal/public/hot
+monaz_license_portal/public/storage
+
+# Logs & Databases
+*.log
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
