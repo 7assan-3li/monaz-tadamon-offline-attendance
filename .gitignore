@@ -4,6 +4,7 @@ Thumbs.db
 *.swp
 *.swo
 *~
+.tool-cache/
 .idea/
 *.iml
 .vscode/
