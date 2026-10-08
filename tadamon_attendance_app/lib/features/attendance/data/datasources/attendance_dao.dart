@@ -20,12 +20,31 @@ class AttendanceDao {
         '${now.year.toString().padLeft(4, '0')}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
     final id = 'session-$teamId-$day';
     final existing = await read(id);
-    if (existing != null) return existing;
+    if (existing != null && existing.items.isNotEmpty) return existing;
     final players =
         await (_database.select(_database.players)..where(
               (row) => row.teamId.equals(teamId) & row.isArchived.equals(false),
             ))
             .get();
+    if (existing != null) {
+      if (players.isNotEmpty) {
+        await _database.transaction(() async {
+          for (final player in players) {
+            await _database
+                .into(_database.attendanceRecords)
+                .insertOnConflictUpdate(
+                  AttendanceRecordsCompanion.insert(
+                    id: '$id-${player.id}',
+                    sessionUuid: id,
+                    playerId: player.id,
+                    status: PlayerAttendanceStatus.unmarked.value,
+                  ),
+                );
+          }
+        });
+      }
+      return (await read(id))!;
+    }
     await _database.transaction(() async {
       await _database
           .into(_database.sessions)

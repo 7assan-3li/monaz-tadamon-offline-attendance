@@ -21,8 +21,8 @@ void main() {
     expect(find.text('نظام تحضير نادي تضامن حضرموت'), findsOneWidget);
     expect(find.text('بدء تحضير تمرين اليوم'), findsOneWidget);
     expect(find.text('حاضر'), findsOneWidget);
-    expect(find.text('غائب بعذر'), findsOneWidget);
-    expect(find.text('غائب بدون عذر'), findsOneWidget);
+    expect(find.text('غائب'), findsOneWidget);
+    expect(find.text('بدون عذر'), findsOneWidget);
 
     final titleContext = tester.element(
       find.text('نظام تحضير نادي تضامن حضرموت'),

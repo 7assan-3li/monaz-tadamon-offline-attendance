@@ -4,17 +4,35 @@ import 'package:tadamon_attendance_app/features/attendance/presentation/screens/
 import 'package:tadamon_attendance_app/features/attendance/presentation/screens/quick_attendance_screen.dart';
 
 class FieldAttendanceFlow extends StatefulWidget {
-  const FieldAttendanceFlow({super.key});
+  const FieldAttendanceFlow({this.initialPage = 0, super.key});
+
+  final int initialPage;
+
   @override
   State<FieldAttendanceFlow> createState() => _FieldAttendanceFlowState();
 }
 
 class _FieldAttendanceFlowState extends State<FieldAttendanceFlow> {
-  var page = 0;
+  late var page = widget.initialPage;
+
   @override
-  Widget build(BuildContext context) => switch (page) {
-    0 => FieldDashboardScreen(onSessionStarted: () => setState(() => page = 1)),
-    1 => QuickAttendanceScreen(onReview: () => setState(() => page = 2)),
-    _ => const DispatchReviewScreen(),
-  };
+  Widget build(BuildContext context) => PopScope(
+    canPop: page == 0 || page == widget.initialPage,
+    onPopInvokedWithResult: (didPop, result) {
+      if (!didPop && page > 0) {
+        setState(() => page--);
+      }
+    },
+    child: switch (page) {
+      0 => FieldDashboardScreen(
+        onSessionStarted: () => setState(() => page = 1),
+      ),
+      1 => QuickAttendanceScreen(
+        onReview: () => setState(() => page = 2),
+      ),
+      _ => DispatchReviewScreen(
+        onBack: () => setState(() => page = 1),
+      ),
+    },
+  );
 }

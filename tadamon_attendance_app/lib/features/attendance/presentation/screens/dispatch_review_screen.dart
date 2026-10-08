@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:tadamon_attendance_app/core/di/service_locator.dart';
 import 'package:tadamon_attendance_app/core/widgets/app_button.dart';
 import 'package:tadamon_attendance_app/core/widgets/app_card.dart';
 import 'package:tadamon_attendance_app/core/widgets/confirmation_dialog.dart';
 import 'package:tadamon_attendance_app/features/attendance/presentation/bloc/attendance_bloc.dart';
 import 'package:tadamon_attendance_app/features/attendance/presentation/widgets/locked_session_banner.dart';
+import 'package:tadamon_attendance_app/features/sync/presentation/bloc/sync_bloc.dart';
+import 'package:tadamon_attendance_app/features/sync/presentation/screens/field_qr_display_screen.dart';
 
 class DispatchReviewScreen extends StatelessWidget {
-  const DispatchReviewScreen({super.key});
+  const DispatchReviewScreen({this.onBack, super.key});
+
+  final VoidCallback? onBack;
+
   @override
   Widget build(
     BuildContext context,
@@ -19,7 +25,16 @@ class DispatchReviewScreen extends StatelessWidget {
       }
       final session = state.session;
       return Scaffold(
-        appBar: AppBar(title: const Text('مراجعة التمرين')),
+        appBar: AppBar(
+          title: const Text('مراجعة التمرين'),
+          leading: (!session.isLocked && onBack != null)
+              ? IconButton(
+                  icon: const Icon(LucideIcons.arrowRight),
+                  tooltip: 'رجوع للتحضير',
+                  onPressed: onBack,
+                )
+              : null,
+        ),
         body: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -36,6 +51,23 @@ class DispatchReviewScreen extends StatelessWidget {
                 ),
               ),
               const Spacer(),
+              if (session.isLocked) ...[
+                AppButton(
+                  label: 'عرض كود الترحيل (QR)',
+                  leadingIcon: LucideIcons.qrCode,
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => BlocProvider<SyncBloc>(
+                          create: (_) => serviceLocator<SyncBloc>(),
+                          child: FieldQrDisplayScreen(session: session),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
               AppButton(
                 label: session.isLocked
                     ? 'مرحّل ومقفل إدارياً'

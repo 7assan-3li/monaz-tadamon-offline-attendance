@@ -32,6 +32,7 @@ Future<void> main() async {
   );
   configureActivationDependencies(currentDeviceId: deviceId);
   configureAttendanceDependencies();
+  configureSyncDependencies();
   final storedLicense = await serviceLocator<ActivationRepository>()
       .readActivatedLicense();
   var clockTampered = false;
@@ -149,7 +150,10 @@ class _AppBootstrapState extends State<AppBootstrap> {
                     ],
                     child: const ClubSettingsScreen(),
                   ),
-                  _ => const DesignSystemGalleryScreen(),
+                  _ => DesignSystemGalleryScreen(
+                    onNavigateTab: (index) =>
+                        setState(() => _selectedIndex = index),
+                  ),
                 },
               ),
       ActivatedDeviceRole.fieldAttendance => FieldAttendanceAppShell(
