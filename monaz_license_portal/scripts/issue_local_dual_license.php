@@ -33,4 +33,12 @@ $licenses = $app->make(GenerateClubDualLicenseAction::class)->execute(
 
 $outputPath = dirname(dirname(__DIR__)).'/tadamon_attendance_app/.activation-code.local';
 file_put_contents($outputPath, $licenses['master']['activation_code']);
-echo "Local Master activation code generated without printing its contents.\n";
+
+$jsonPath = dirname(dirname(__DIR__)).'/tadamon_attendance_app/.activation-codes.json';
+file_put_contents($jsonPath, json_encode([
+    'master' => $licenses['master']['activation_code'],
+    'field' => $licenses['field']['activation_code'],
+], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+echo "Activation codes generated successfully for Master and Field devices.\n";
+

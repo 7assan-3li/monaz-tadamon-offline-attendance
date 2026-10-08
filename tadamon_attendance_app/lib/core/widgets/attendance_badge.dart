@@ -11,6 +11,24 @@ extension AttendanceStatusVisuals on AttendanceStatus {
     AttendanceStatus.unexcused => 'غائب بدون عذر',
   };
 
+  String get dbValue => switch (this) {
+    AttendanceStatus.present => 'present',
+    AttendanceStatus.excused => 'excused',
+    AttendanceStatus.unexcused => 'unexcused',
+  };
+
+  String get shortArabicSymbol => switch (this) {
+    AttendanceStatus.present => 'ح',
+    AttendanceStatus.excused => 'ع',
+    AttendanceStatus.unexcused => 'غ',
+  };
+
+  static AttendanceStatus fromDb(String value) => switch (value) {
+    'present' => AttendanceStatus.present,
+    'excused' => AttendanceStatus.excused,
+    _ => AttendanceStatus.unexcused,
+  };
+
   Color get foregroundColor => switch (this) {
     AttendanceStatus.present => AppColors.present,
     AttendanceStatus.excused => AppColors.excused,

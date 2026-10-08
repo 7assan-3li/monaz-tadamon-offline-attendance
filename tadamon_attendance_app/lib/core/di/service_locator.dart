@@ -36,6 +36,19 @@ import 'package:tadamon_attendance_app/features/sync/domain/usecases/generate_qr
 import 'package:tadamon_attendance_app/features/sync/domain/usecases/import_qr_payload_usecase.dart';
 import 'package:tadamon_attendance_app/features/sync/domain/usecases/start_local_sync_server_usecase.dart';
 import 'package:tadamon_attendance_app/features/sync/presentation/bloc/sync_bloc.dart';
+import 'package:tadamon_attendance_app/features/reports/data/datasources/audit_log_dao.dart';
+import 'package:tadamon_attendance_app/features/reports/data/datasources/excel_report_engine.dart';
+import 'package:tadamon_attendance_app/features/reports/data/datasources/pdf_report_engine.dart';
+import 'package:tadamon_attendance_app/features/reports/data/repositories/reports_repository_impl.dart';
+import 'package:tadamon_attendance_app/features/reports/domain/repositories/reports_repository.dart';
+import 'package:tadamon_attendance_app/features/reports/domain/usecases/calculate_entitlement_use_case.dart';
+import 'package:tadamon_attendance_app/features/reports/presentation/bloc/reports_bloc.dart';
+import 'package:tadamon_attendance_app/features/backup/data/datasources/backup_local_datasource.dart';
+import 'package:tadamon_attendance_app/features/backup/data/repositories/backup_repository_impl.dart';
+import 'package:tadamon_attendance_app/features/backup/domain/repositories/backup_repository.dart';
+import 'package:tadamon_attendance_app/features/backup/domain/usecases/create_backup_use_case.dart';
+import 'package:tadamon_attendance_app/features/backup/domain/usecases/restore_backup_use_case.dart';
+import 'package:tadamon_attendance_app/features/backup/presentation/bloc/backup_bloc.dart';
 
 final GetIt serviceLocator = GetIt.instance;
 
@@ -255,6 +268,38 @@ Future<void> configureMasterDependencies() async {
         serviceLocator<AddPlayerUseCase>(),
         serviceLocator<ArchivePlayerUseCase>(),
         serviceLocator<PlayersRepository>(),
+      ),
+    )
+    ..registerLazySingleton<AuditLogDao>(() => AuditLogDao(database))
+    ..registerLazySingleton<PdfReportEngine>(PdfReportEngine.new)
+    ..registerLazySingleton<ExcelReportEngine>(ExcelReportEngine.new)
+    ..registerLazySingleton<CalculateEntitlementUseCase>(CalculateEntitlementUseCase.new)
+    ..registerLazySingleton<ReportsRepository>(
+      () => ReportsRepositoryImpl(
+        database: database,
+        auditLogDao: serviceLocator<AuditLogDao>(),
+        pdfEngine: serviceLocator<PdfReportEngine>(),
+        excelEngine: serviceLocator<ExcelReportEngine>(),
+        entitlementUseCase: serviceLocator<CalculateEntitlementUseCase>(),
+      ),
+    )
+    ..registerFactory<ReportsBloc>(
+      () => ReportsBloc(serviceLocator<ReportsRepository>()),
+    )
+    ..registerLazySingleton<BackupLocalDataSource>(() => BackupLocalDataSource(database))
+    ..registerLazySingleton<BackupRepository>(
+      () => BackupRepositoryImpl(serviceLocator<BackupLocalDataSource>()),
+    )
+    ..registerLazySingleton<CreateBackupUseCase>(
+      () => CreateBackupUseCase(serviceLocator<BackupRepository>()),
+    )
+    ..registerLazySingleton<RestoreBackupUseCase>(
+      () => RestoreBackupUseCase(serviceLocator<BackupRepository>()),
+    )
+    ..registerFactory<BackupBloc>(
+      () => BackupBloc(
+        serviceLocator<CreateBackupUseCase>(),
+        serviceLocator<RestoreBackupUseCase>(),
       ),
     );
 }

@@ -30,6 +30,8 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 .dart-defines.local.json
 .activation-code.local
+.activation-codes.json
+*.png
 .pub-cache/
 .pub/
 /build/

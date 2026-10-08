@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:tadamon_attendance_app/core/di/service_locator.dart';
+import 'package:tadamon_attendance_app/features/backup/presentation/bloc/backup_bloc.dart';
+import 'package:tadamon_attendance_app/features/backup/presentation/screens/backup_screen.dart';
 import 'package:tadamon_attendance_app/features/settings/domain/entities/club_profile_settings.dart';
 import 'package:tadamon_attendance_app/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:tadamon_attendance_app/features/settings/presentation/widgets/pin_pad_modal.dart';
@@ -84,6 +87,21 @@ class _SettingsFormState extends State<_SettingsForm> {
         label: Text(
           widget.settings.hasPin ? 'تغيير رمز الحماية' : 'تعيين رمز الحماية',
         ),
+      ),
+      const SizedBox(height: 12),
+      OutlinedButton.icon(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => BlocProvider(
+                create: (_) => serviceLocator<BackupBloc>(),
+                child: const BackupScreen(),
+              ),
+            ),
+          );
+        },
+        icon: const Icon(LucideIcons.hardDrive),
+        label: const Text('النسخ الاحتياطي والاستعادة (USB)'),
       ),
       const SizedBox(height: 24),
       const TeamsScreen(),

@@ -21,6 +21,8 @@ import 'package:tadamon_attendance_app/features/settings/presentation/screens/cl
 import 'package:tadamon_attendance_app/features/teams/presentation/bloc/teams_bloc.dart';
 import 'package:tadamon_attendance_app/features/attendance/presentation/bloc/attendance_bloc.dart';
 import 'package:tadamon_attendance_app/features/attendance/presentation/screens/field_attendance_flow.dart';
+import 'package:tadamon_attendance_app/features/reports/presentation/bloc/reports_bloc.dart';
+import 'package:tadamon_attendance_app/features/reports/presentation/screens/reports_hub_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -134,6 +136,10 @@ class _AppBootstrapState extends State<AppBootstrap> {
                         serviceLocator<PlayersBloc>()
                           ..add(const PlayersRequested()),
                     child: const PlayersListScreen(),
+                  ),
+                  2 => BlocProvider(
+                    create: (_) => serviceLocator<ReportsBloc>(),
+                    child: const ReportsHubScreen(),
                   ),
                   3 => MultiBlocProvider(
                     providers: [
