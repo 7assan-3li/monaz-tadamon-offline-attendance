@@ -75,8 +75,9 @@ void main() {
     expect(find.byType(MasterAdminAppShell), findsOneWidget);
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('الرئيسية'), findsOneWidget);
+    expect(find.text('التحضير'), findsOneWidget);
     expect(find.text('اللاعبون'), findsOneWidget);
-    expect(find.text('الكشوفات'), findsOneWidget);
+    expect(find.text('التقارير'), findsOneWidget);
     expect(find.text('الإعدادات'), findsOneWidget);
   });
 }

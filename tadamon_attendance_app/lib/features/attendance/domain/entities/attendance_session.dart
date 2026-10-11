@@ -8,6 +8,8 @@ class AttendanceSession {
     required this.items,
     required this.isLocked,
     required this.isDispatched,
+    this.location = 'ملعب بارادم',
+    this.sessionTitle = 'جلسة تدريبية رئيسية - عصر اليوم',
   });
   final String sessionUuid;
   final String teamId;
@@ -15,6 +17,9 @@ class AttendanceSession {
   final List<PlayerAttendanceItem> items;
   final bool isLocked;
   final bool isDispatched;
+  final String location;
+  final String sessionTitle;
+
   int get presentCount => items
       .where((item) => item.status == PlayerAttendanceStatus.present)
       .length;
@@ -24,10 +29,18 @@ class AttendanceSession {
   int get unexcusedCount => items
       .where((item) => item.status == PlayerAttendanceStatus.unexcused)
       .length;
+  int get unmarkedCount => items
+      .where((item) => item.status == PlayerAttendanceStatus.unmarked)
+      .length;
+  int get recordedCount => presentCount + excusedCount + unexcusedCount;
+  int get totalCount => items.length;
+
   AttendanceSession copyWith({
     List<PlayerAttendanceItem>? items,
     bool? isLocked,
     bool? isDispatched,
+    String? location,
+    String? sessionTitle,
   }) => AttendanceSession(
     sessionUuid: sessionUuid,
     teamId: teamId,
@@ -35,5 +48,7 @@ class AttendanceSession {
     items: items ?? this.items,
     isLocked: isLocked ?? this.isLocked,
     isDispatched: isDispatched ?? this.isDispatched,
+    location: location ?? this.location,
+    sessionTitle: sessionTitle ?? this.sessionTitle,
   );
 }

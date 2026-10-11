@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:tadamon_attendance_app/core/di/service_locator.dart';
 import 'package:tadamon_attendance_app/core/presentation/design_system_gallery_screen.dart';
+import 'package:tadamon_attendance_app/core/presentation/splash_screen.dart';
 import 'package:tadamon_attendance_app/core/routing/field_attendance_app_shell.dart';
 import 'package:tadamon_attendance_app/core/routing/master_admin_app_shell.dart';
 import 'package:tadamon_attendance_app/core/security/android_hardware_components_source.dart';
@@ -49,7 +50,12 @@ Future<void> main() async {
     MyApp(
       home: clockTampered
           ? const ClockTamperedScreen()
-          : AppBootstrap(deviceId: deviceId, initialLicense: storedLicense),
+          : SplashScreen(
+              targetChild: AppBootstrap(
+                deviceId: deviceId,
+                initialLicense: storedLicense,
+              ),
+            ),
     ),
   );
 }
@@ -59,11 +65,10 @@ class MyApp extends StatelessWidget {
 
   final Widget home;
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'نظام تحضير نادي تضامن حضرموت',
+      title: 'تحضير نادي تضامن حضرموت',
       theme: AppTheme.light,
       builder: (context, child) => Directionality(
         textDirection: TextDirection.rtl,
@@ -131,17 +136,32 @@ class _AppBootstrapState extends State<AppBootstrap> {
                 onDestinationSelected: (index) =>
                     setState(() => _selectedIndex = index),
                 child: switch (_selectedIndex) {
-                  1 => BlocProvider(
+                  1 => MultiBlocProvider(
+                    providers: [
+                      BlocProvider(
+                        create: (_) => serviceLocator<AttendanceBloc>()
+                          ..add(const StartTodaySessionEvent('team-first')),
+                      ),
+                    ],
+                    child: const FieldAttendanceFlow(
+                      initialPage: 1,
+                      showBottomNav: false,
+                    ),
+                  ),
+                  2 => BlocProvider(
                     create: (_) =>
                         serviceLocator<PlayersBloc>()
                           ..add(const PlayersRequested()),
                     child: const PlayersListScreen(),
                   ),
-                  2 => BlocProvider(
+                  3 => BlocProvider(
                     create: (_) => serviceLocator<ReportsBloc>(),
-                    child: const ReportsHubScreen(),
+                    child: ReportsHubScreen(
+                      onNavigateTab: (index) =>
+                          setState(() => _selectedIndex = index),
+                    ),
                   ),
-                  3 => MultiBlocProvider(
+                  4 => MultiBlocProvider(
                     providers: [
                       BlocProvider(
                         create: (_) =>

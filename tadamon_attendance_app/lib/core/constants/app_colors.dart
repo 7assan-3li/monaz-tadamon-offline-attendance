@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 abstract final class AppColors {
-  static const Color royalBlue = Color(0xFF0E4B94);
-  static const Color interactionBlue = Color(0xFF1E60B5);
+  /// اللون الأزرق الرسمي المعتمد من شعار نادي تضامن حضرموت (#0F48A2)
+  static const Color royalBlue = Color(0xFF0F48A2);
+  static const Color royalBlueDark = Color(0xFF0A3A85);
+  static const Color interactionBlue = Color(0xFF1B59BF);
 
   static const Color canvas = Color(0xFFF8FAFC);
   static const Color surface = Color(0xFFFFFFFF);

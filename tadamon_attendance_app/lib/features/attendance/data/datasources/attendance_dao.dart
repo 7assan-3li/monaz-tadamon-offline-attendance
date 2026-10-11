@@ -97,6 +97,8 @@ class AttendanceDao {
           playerId: player.id,
           playerName: player.name,
           jerseyNumber: player.jerseyNumber,
+          position: player.position,
+          notes: player.notes,
           status: PlayerAttendanceStatus.values.byName(record.status),
         );
       }).toList(),

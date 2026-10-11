@@ -76,33 +76,44 @@ Future<void> seedDefaultRosterIfEmpty(AppDatabase database) async {
           updatedAt: now,
         ),
       );
-
-  final existingPlayers = await (database.select(database.players)
-        ..where((tbl) => tbl.teamId.equals('team-first')))
-      .get();
-  if (existingPlayers.isEmpty) {
-    const seedPlayers = [
-      ('player-1', 'محمد باعباد', 1, 'حارس مرمى'),
-      ('player-2', 'علي بن الشيخ أبوبكر', 7, 'وسط'),
-      ('player-3', 'سالم بلعلا', 10, 'صانع ألعاب'),
-      ('player-4', 'أحمد باحاج', 4, 'مدافع'),
-      ('player-5', 'عمر باوزير', 8, 'مدافع'),
-      ('player-6', 'عبدالله الكثيري', 9, 'مهاجم'),
-    ];
-    for (final p in seedPlayers) {
-      await database.into(database.players).insertOnConflictUpdate(
-        PlayersCompanion.insert(
-          id: p.$1,
-          name: p.$2,
-          teamId: 'team-first',
-          jerseyNumber: Value(p.$3),
-          position: Value(p.$4),
-          joinDate: now,
+  await database
+      .into(database.teams)
+      .insertOnConflictUpdate(
+        TeamsCompanion.insert(
+          id: 'team-youth',
+          name: 'فريق الشباب',
+          category: 'تحت 19 سنة',
+          createdAt: now,
           updatedAt: now,
         ),
       );
-    }
-  }
+  await database
+      .into(database.teams)
+      .insertOnConflictUpdate(
+        TeamsCompanion.insert(
+          id: 'team-junior',
+          name: 'فريق الناشئين',
+          category: 'تحت 17 سنة',
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+  // Clean out any legacy sample/placeholder players so the app starts completely fresh
+  const legacySeedIds = [
+    'player-1', 'player-2', 'player-3', 'player-4', 'player-5',
+    'player-6', 'player-7', 'player-8', 'player-9', 'player-10',
+    'player-11', 'player-12', 'player-13', 'player-14', 'player-15',
+    'player-16', 'player-17', 'player-18', 'player-19', 'player-20',
+    'player-21', 'player-22', 'player-23', 'player-24', 'player-25',
+    'player-26', 'player-27',
+  ];
+  await (database.delete(database.attendanceRecords)
+        ..where((tbl) => tbl.playerId.isIn(legacySeedIds)))
+      .go();
+  await (database.delete(database.players)
+        ..where((tbl) => tbl.id.isIn(legacySeedIds)))
+      .go();
 }
 
 Future<void> initializeCoreDependencies({AppDatabase? database}) async {

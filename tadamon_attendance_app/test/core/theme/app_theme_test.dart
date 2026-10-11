@@ -6,8 +6,8 @@ import 'package:tadamon_attendance_app/core/theme/app_theme.dart';
 
 void main() {
   test('uses the approved Tadamon identity colors', () {
-    expect(AppColors.royalBlue, const Color(0xFF0E4B94));
-    expect(AppColors.interactionBlue, const Color(0xFF1E60B5));
+    expect(AppColors.royalBlue, const Color(0xFF0F48A2));
+    expect(AppColors.interactionBlue, const Color(0xFF1B59BF));
     expect(AppColors.canvas, const Color(0xFFF8FAFC));
     expect(AppColors.present, const Color(0xFF15803D));
     expect(AppColors.excused, const Color(0xFFB45309));

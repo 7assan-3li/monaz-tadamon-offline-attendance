@@ -6,6 +6,7 @@ import 'package:tadamon_attendance_app/core/security/license_parser.dart';
 
 const embeddedEd25519PublicKey = String.fromEnvironment(
   'MONAZ_ED25519_PUBLIC_KEY',
+  defaultValue: 'x9oe/ZKag56hX4T1z9/gXePYqS/C8sPgjtXlJafxOFU=',
 );
 
 final class Ed25519Verifier {

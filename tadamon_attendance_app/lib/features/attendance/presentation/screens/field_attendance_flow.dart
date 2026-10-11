@@ -4,9 +4,14 @@ import 'package:tadamon_attendance_app/features/attendance/presentation/screens/
 import 'package:tadamon_attendance_app/features/attendance/presentation/screens/quick_attendance_screen.dart';
 
 class FieldAttendanceFlow extends StatefulWidget {
-  const FieldAttendanceFlow({this.initialPage = 0, super.key});
+  const FieldAttendanceFlow({
+    this.initialPage = 0,
+    this.showBottomNav = true,
+    super.key,
+  });
 
   final int initialPage;
+  final bool showBottomNav;
 
   @override
   State<FieldAttendanceFlow> createState() => _FieldAttendanceFlowState();
@@ -29,6 +34,7 @@ class _FieldAttendanceFlowState extends State<FieldAttendanceFlow> {
       ),
       1 => QuickAttendanceScreen(
         onReview: () => setState(() => page = 2),
+        showBottomNav: widget.showBottomNav,
       ),
       _ => DispatchReviewScreen(
         onBack: () => setState(() => page = 1),

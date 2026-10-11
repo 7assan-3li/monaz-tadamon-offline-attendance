@@ -18,14 +18,13 @@ void main() {
     await tester.pumpWidget(const MyApp(home: DesignSystemGalleryScreen()));
     await tester.pumpAndSettle();
 
-    expect(find.text('نظام تحضير نادي تضامن حضرموت'), findsOneWidget);
+    expect(find.text('تحضير نادي تضامن حضرموت'), findsOneWidget);
     expect(find.text('بدء تحضير تمرين اليوم'), findsOneWidget);
-    expect(find.text('حاضر'), findsOneWidget);
-    expect(find.text('غائب'), findsOneWidget);
-    expect(find.text('بدون عذر'), findsOneWidget);
+    expect(find.text('منشأة الفقيد بارادم'), findsOneWidget);
+    expect(find.text('الفريق الأول'), findsOneWidget);
 
     final titleContext = tester.element(
-      find.text('نظام تحضير نادي تضامن حضرموت'),
+      find.text('تحضير نادي تضامن حضرموت'),
     );
     expect(Directionality.of(titleContext), TextDirection.rtl);
   });

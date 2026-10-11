@@ -15,6 +15,16 @@ void main() {
       secureStore: _MemorySecureValueStore(),
     );
     await initializeCoreDependencies(database: database);
+    final now = DateTime.now().toUtc();
+    await database.into(database.players).insert(
+      PlayersCompanion.insert(
+        id: 'test-player-1',
+        name: 'محمد باعباد',
+        teamId: 'team-first',
+        joinDate: now,
+        updatedAt: now,
+      ),
+    );
     configureAttendanceDependencies();
     configureSyncDependencies();
   });

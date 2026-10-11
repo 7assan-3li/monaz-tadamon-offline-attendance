@@ -37,3 +37,6 @@ monaz_license_portal/public/storage
 *.sqlite-journal
 *.sqlite-wal
 *.sqlite-shm
+
+# Root-level APK copies (tracked in releases/ instead)
+/*.apk

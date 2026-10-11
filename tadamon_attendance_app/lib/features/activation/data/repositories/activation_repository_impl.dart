@@ -72,7 +72,7 @@ final class ActivationRepositoryImpl implements ActivationRepository {
       LicenseSecurityStoreCompanion.insert(
         deviceId: deviceId,
         deviceMode: _databaseRole(role),
-        pairedDeviceId: Value(_requiredString(payload, 'paired_device_id')),
+        pairedDeviceId: Value(payload['paired_device_id'] as String?),
         licenseKey: activationCode,
         clubName: license.clubName,
         teamName: Value(license.teamName),

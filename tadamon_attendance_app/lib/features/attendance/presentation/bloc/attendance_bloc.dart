@@ -21,6 +21,15 @@ class UpdatePlayerStatusEvent extends AttendanceEvent {
   final String playerId;
 }
 
+class SetPlayerAttendanceStatusEvent extends AttendanceEvent {
+  const SetPlayerAttendanceStatusEvent({
+    required this.playerId,
+    required this.status,
+  });
+  final String playerId;
+  final PlayerAttendanceStatus status;
+}
+
 class DispatchSessionEvent extends AttendanceEvent {
   const DispatchSessionEvent();
 }
@@ -65,6 +74,12 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
         );
         return _update(session.sessionUuid, item.playerId, item.status.next);
       }),
+    );
+    on<SetPlayerAttendanceStatusEvent>(
+      (event, emit) async => _runCurrent(
+        emit,
+        (session) => _update(session.sessionUuid, event.playerId, event.status),
+      ),
     );
     on<DispatchSessionEvent>(
       (event, emit) async =>

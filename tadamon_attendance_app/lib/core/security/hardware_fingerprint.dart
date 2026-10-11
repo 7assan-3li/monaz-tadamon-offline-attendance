@@ -4,6 +4,7 @@ import 'package:cryptography/cryptography.dart';
 
 const embeddedHardwareFingerprintSalt = String.fromEnvironment(
   'MONAZ_HARDWARE_FINGERPRINT_SALT',
+  defaultValue: 'E7S770m04cy4AMDo/fdeCbP0l8udan2yGyfvBc4zhD0=',
 );
 
 final class HardwareFingerprintComponents {

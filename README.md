@@ -7,10 +7,10 @@
 
 ## تنزيل تطبيق Android
 
-يمكن تنزيل ملف التثبيت الحالي مباشرة: **[MONAZ Tadamon Attendance 1.0.0+1 APK](releases/MONAZ-Tadamon-Attendance-1.0.0+1.apk)**.
+يمكن تنزيل ملف التثبيت الحالي مباشرة: **[تحضير نادي تضامن حضرموت APK (v1.0.0)](releases/MONAZ-Tadamon-Attendance-1.0.0+1.apk)**.
 
 بصمة SHA-256 للملف:
-`39B913ED60EA8165A7826A14FBCD37A64F3A8113F53F004F238266F8F6967D0C`
+`0B171731CEBB195D46279F1A680036362AF21669B77A1F6AB185B20AFBFD01D7`
 
 ---
 

@@ -45,6 +45,28 @@ void main() {
       expect(session.isLocked, isTrue);
     },
   );
+  blocTest<AttendanceBloc, AttendanceState>(
+    'sets specific player attendance status directly via SetPlayerAttendanceStatusEvent',
+    build: build,
+    act: (bloc) async {
+      bloc.add(const StartTodaySessionEvent('team-first'));
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(
+        const SetPlayerAttendanceStatusEvent(
+          playerId: 'p1',
+          status: PlayerAttendanceStatus.excused,
+        ),
+      );
+    },
+    wait: const Duration(milliseconds: 20),
+    verify: (bloc) {
+      final session = (bloc.state as AttendanceReady).session;
+      expect(
+        session.items.firstWhere((p) => p.playerId == 'p1').status,
+        PlayerAttendanceStatus.excused,
+      );
+    },
+  );
 }
 
 class _Repository implements AttendanceRepository {
@@ -91,7 +113,14 @@ class _Repository implements AttendanceRepository {
     String id,
     String playerId,
     PlayerAttendanceStatus status,
-  ) async => session;
+  ) async => session = session.copyWith(
+    items: session.items
+        .map(
+          (item) =>
+              item.playerId == playerId ? item.copyWith(status: status) : item,
+        )
+        .toList(),
+  );
   @override
   Future<AttendanceSession> dispatch(String id) async =>
       session = session.copyWith(isLocked: true, isDispatched: true);
