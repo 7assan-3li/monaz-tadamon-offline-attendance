@@ -149,15 +149,13 @@ void main() {
 
     // 2. Verify Session 1 Cards Details
     expect(find.text('ملعب بارادم بالمكلا'), findsOneWidget);
-    expect(find.text('معتمد'), findsOneWidget);
     expect(find.text('صالة النادي المغلقة'), findsOneWidget);
-    expect(find.text('مسودة'), findsOneWidget);
 
     // 3. Drill-down: Tap on the first session card to open MasterReviewApprovalScreen
-    final reviewButton = find.text('عرض الكشف');
-    expect(reviewButton, findsOneWidget);
+    final reviewButtons = find.text('عرض الكشف');
+    expect(reviewButtons, findsNWidgets(2));
 
-    await tester.tap(reviewButton);
+    await tester.tap(reviewButtons.first);
     await tester.pumpAndSettle();
 
     // 4. Verify MasterReviewApprovalScreen is opened

@@ -132,10 +132,8 @@ void main() {
     expect(find.text('كشف الحضور الشهري'), findsOneWidget);
     expect(find.text('الخلاصة الإدارية'), findsOneWidget);
 
-    // 2. Test Quick Integration Navigation Link
-    await tester.tap(find.text('التحضير الميداني'));
-    await tester.pumpAndSettle();
-    expect(navigatedTab, 1);
+    // 2. Verify Hub Content
+    expect(find.text('سجل الحصص'), findsOneWidget);
 
     // 3. Test Notifications Sheet
     await tester.tap(find.byIcon(LucideIcons.bell));

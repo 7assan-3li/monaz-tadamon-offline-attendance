@@ -353,19 +353,11 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
         _buildScreenTitle(),
         const SizedBox(height: 12),
 
-        // System Integration Quick Links
-        _buildSystemIntegrationBar(),
-        const SizedBox(height: 12),
-
         // 2. Selectors: Period & Squad (تفاعلية لاختيار الشهر والتشكيلة)
         _buildSelectorsRow(),
-        const SizedBox(height: 10),
-
-        // 3. Training Period Filter Chips (فلترة الفترات التدريبية)
-        _buildPeriodFilterChips(),
         const SizedBox(height: 12),
 
-        // 4. Segmented Control Switcher
+        // 3. Segmented Control Switcher
         _buildSegmentedControl(),
         const SizedBox(height: 14),
 
@@ -447,84 +439,6 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  /// System Integration Bar: Direct 1-tap links connecting to Home, Attendance, and Players
-  Widget _buildSystemIntegrationBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderSubtle),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildQuickLinkPill(
-              icon: LucideIcons.calendarCheck2,
-              label: 'التحضير الميداني',
-              color: AppColors.royalBlue,
-              onTap: () => widget.onNavigateTab?.call(1),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _buildQuickLinkPill(
-              icon: LucideIcons.users,
-              label: 'كشف اللاعبين',
-              color: AppColors.session,
-              onTap: () => widget.onNavigateTab?.call(2),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _buildQuickLinkPill(
-              icon: LucideIcons.layoutDashboard,
-              label: 'الرئيسية',
-              color: AppColors.textSecondary,
-              onTap: () => widget.onNavigateTab?.call(0),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickLinkPill({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 14, color: color),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                fontSize: 10.5,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -649,42 +563,73 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
   Widget _buildPeriodFilterChips() {
     final periods = [
       {'key': 'all', 'label': 'جميع الفترات', 'icon': LucideIcons.layers},
-      {'key': 'morning', 'label': '☀️ تمرين صباحي', 'icon': LucideIcons.sun},
-      {'key': 'evening', 'label': '🌙 تمرين مسائي', 'icon': LucideIcons.moon},
-      {'key': 'extra', 'label': '⚡ فترة خاصة', 'icon': LucideIcons.zap},
+      {'key': 'morning', 'label': 'تمرين صباحي', 'icon': LucideIcons.sunMedium},
+      {'key': 'evening', 'label': 'تمرين مسائي', 'icon': LucideIcons.moon},
+      {'key': 'extra', 'label': 'فترة خاصة', 'icon': LucideIcons.zap},
     ];
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
       child: Row(
         children: periods.map((p) {
           final isSelected = _selectedPeriod == p['key'];
           return Padding(
             padding: const EdgeInsetsDirectional.only(end: 8),
-            child: ChoiceChip(
-              label: Text(
-                p['label'] as String,
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 11,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected ? Colors.white : AppColors.textPrimary,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  if (_selectedPeriod != p['key']) {
+                    setState(() {
+                      _selectedPeriod = p['key'] as String;
+                    });
+                    _loadReportsData();
+                  }
+                },
+                borderRadius: BorderRadius.circular(10),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppColors.royalBlue : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isSelected ? AppColors.royalBlue : const Color(0xFFE2E8F0),
+                      width: isSelected ? 1.5 : 1.0,
+                    ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: AppColors.royalBlue.withValues(alpha: 0.25),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            )
+                          ]
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        p['icon'] as IconData,
+                        size: 15,
+                        color: isSelected ? Colors.white : AppColors.royalBlue,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        p['label'] as String,
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 11.5,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                          color: isSelected ? Colors.white : AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              selected: isSelected,
-              selectedColor: AppColors.royalBlue,
-              backgroundColor: AppColors.surface,
-              side: BorderSide(
-                color: isSelected ? AppColors.royalBlue : AppColors.borderSubtle,
-              ),
-              onSelected: (selected) {
-                if (selected && _selectedPeriod != p['key']) {
-                  setState(() {
-                    _selectedPeriod = p['key'] as String;
-                  });
-                  _loadReportsData();
-                }
-              },
             ),
           );
         }).toList(),
@@ -765,7 +710,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                 label,
                 style: TextStyle(
                   fontFamily: 'Cairo',
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                   color: isSelected ? AppColors.royalBlue : AppColors.textSecondary,
                 ),
@@ -780,23 +725,20 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
 
   // --- تبويب 0: سجل الحصص المحفوظة (استعراض الحصص وفلترة التاريخ والمراجعة التفصيلية) ---
 
+  // --- تبويب 0: سجل الحصص والتمارين (كشف التمارين المنفذة واستعراض الحضور) ---
+
   Widget _buildSavedSessionsTab(ReportsLoaded state) {
     final sessions = state.sheet.sessions;
     final totalSessions = sessions.length;
-    final approvedCount = sessions.where((s) => s.isApproved).length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // 1. ملخص حصص الفترة
-        _buildSessionsSummaryBanner(state, totalSessions, approvedCount),
-        const SizedBox(height: 12),
-
-        // 2. بطاقة فلترة نطاق التاريخ
-        _buildDateRangeFilterCard(),
+        // 1. ملخص حصص الفترة المحددة
+        _buildSessionsSummaryCard(state, totalSessions),
         const SizedBox(height: 14),
 
-        // 3. عنوان القائمة مع العدد
+        // 2. عنوان القائمة مع العدد
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -819,30 +761,11 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                 ),
               ],
             ),
-            if (_customStartDate != null)
-              InkWell(
-                onTap: _clearDateRangeFilter,
-                child: const Row(
-                  children: [
-                    Icon(LucideIcons.rotateCcw, size: 14, color: AppColors.royalBlue),
-                    SizedBox(width: 4),
-                    Text(
-                      'إلغاء الفلتر',
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.royalBlue,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
           ],
         ),
         const SizedBox(height: 10),
 
-        // 4. بطاقات الحصص أو حالة الفراغ
+        // 3. بطاقات الحصص أو حالة الفراغ
         if (sessions.isEmpty)
           _buildEmptySessionsCard()
         else
@@ -860,14 +783,12 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
     );
   }
 
-  Widget _buildSessionsSummaryBanner(
+  Widget _buildSessionsSummaryCard(
     ReportsLoaded state,
     int totalSessions,
-    int approvedCount,
   ) {
     final sessions = state.sheet.sessions;
     final totalPresent = sessions.fold<int>(0, (s, item) => s + item.presentCount);
-    final totalExcused = sessions.fold<int>(0, (s, item) => s + item.excusedCount);
     final totalUnexcused = sessions.fold<int>(0, (s, item) => s + item.unexcusedCount);
 
     final avgRate = sessions.isNotEmpty
@@ -877,32 +798,40 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSubtle),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
                   Container(
-                    width: 34,
-                    height: 34,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
                       color: AppColors.royalBlue.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
                       LucideIcons.calendarCheck2,
-                      size: 18,
+                      size: 19,
                       color: AppColors.royalBlue,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -910,13 +839,13 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                         'ملخص حصص الفترة المحددة',
                         style: TextStyle(
                           fontFamily: 'Cairo',
-                          fontSize: 13,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary,
                         ),
                       ),
                       Text(
-                        '$_currentSquadName • $_dateRangeFilterLabel',
+                        '$_currentSquadName • $_currentMonthName',
                         style: const TextStyle(
                           fontFamily: 'Cairo',
                           fontSize: 10,
@@ -928,238 +857,138 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
-                  color: approvedCount == totalSessions && totalSessions > 0
-                      ? AppColors.presentBackground
-                      : const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  totalSessions == 0
-                      ? 'لا توجد حصص'
-                      : (approvedCount == totalSessions
-                          ? 'كافة الحصص معتمدة'
-                          : '$approvedCount / $totalSessions معتمد'),
-                  style: TextStyle(
+                  '$totalSessions تمرين مسجل',
+                  style: const TextStyle(
                     fontFamily: 'Cairo',
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    color: approvedCount == totalSessions && totalSessions > 0
-                        ? AppColors.present
-                        : const Color(0xFFD97706),
+                    color: AppColors.royalBlue,
                   ),
                 ),
               ),
             ],
           ),
+
           const SizedBox(height: 12),
+
+          // Metrics Row
           Row(
             children: [
               Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.canvas,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: AppColors.royalBlue.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          LucideIcons.dumbbell,
-                          size: 18,
-                          color: AppColors.royalBlue,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'إجمالي الحصص',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 9,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              Text(
-                                '$totalSessions',
-                                style: const TextStyle(
-                                  fontFamily: 'Cairo',
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              const Text(
-                                'حصة',
-                                style: TextStyle(
-                                  fontFamily: 'Cairo',
-                                  fontSize: 10,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                child: _buildMetricTile(
+                  icon: LucideIcons.dumbbell,
+                  iconColor: AppColors.royalBlue,
+                  bgColor: const Color(0xFFEFF6FF),
+                  label: 'إجمالي الحصص',
+                  value: '$totalSessions',
+                  unit: 'حصة',
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.canvas,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: AppColors.presentBackground,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          LucideIcons.percent,
-                          size: 18,
-                          color: AppColors.present,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'متوسط الحضور',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 9,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          Text(
-                            '${avgRate.toStringAsFixed(0)}%',
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.present,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                child: _buildMetricTile(
+                  icon: LucideIcons.percent,
+                  iconColor: const Color(0xFF16A34A),
+                  bgColor: const Color(0xFFDCFCE7),
+                  label: 'متوسط الحضور',
+                  value: '${avgRate.toStringAsFixed(0)}%',
+                  unit: '',
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildMetricTile(
+                  icon: LucideIcons.users,
+                  iconColor: const Color(0xFF475569),
+                  bgColor: const Color(0xFFF1F5F9),
+                  label: 'حاضر / غياب',
+                  value: '$totalPresent / $totalUnexcused',
+                  unit: '',
                 ),
               ),
             ],
           ),
-          if (totalSessions > 0) ...[
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                _LegendDot(color: AppColors.present, label: 'إجمالي الحضور: $totalPresent'),
-                const SizedBox(width: 10),
-                _LegendDot(color: AppColors.excused, label: 'معذور: $totalExcused'),
-                const SizedBox(width: 10),
-                _LegendDot(color: AppColors.unexcused, label: 'غياب: $totalUnexcused'),
-              ],
-            ),
-          ],
         ],
       ),
     );
   }
 
-  Widget _buildDateRangeFilterCard() {
-    final isCustom = _customStartDate != null && _customEndDate != null;
+  Widget _buildMetricTile({
+    required IconData icon,
+    required Color iconColor,
+    required Color bgColor,
+    required String label,
+    required String value,
+    required String unit,
+  }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
-        color: isCustom
-            ? AppColors.royalBlue.withValues(alpha: 0.05)
-            : AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isCustom ? AppColors.royalBlue : AppColors.borderSubtle,
-        ),
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            isCustom ? LucideIcons.calendarCheck2 : LucideIcons.calendarSearch,
-            size: 20,
-            color: AppColors.royalBlue,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isCustom ? 'نطاق التاريخ المخصص' : 'فترة العرض الحالية',
+          Row(
+            children: [
+              Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(icon, size: 12, color: iconColor),
+              ),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  label,
                   style: const TextStyle(
                     fontFamily: 'Cairo',
-                    fontSize: 9.5,
+                    fontSize: 8.5,
+                    color: AppColors.textSecondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                value,
+                style: const TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              if (unit.isNotEmpty) ...[
+                const SizedBox(width: 3),
+                Text(
+                  unit,
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 9,
                     color: AppColors.textSecondary,
                   ),
                 ),
-                Text(
-                  _dateRangeFilterLabel,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
               ],
-            ),
-          ),
-          if (isCustom)
-            IconButton(
-              icon: const Icon(LucideIcons.x, size: 18, color: AppColors.unexcused),
-              tooltip: 'إلغاء الفلتر',
-              onPressed: _clearDateRangeFilter,
-            ),
-          ElevatedButton.icon(
-            onPressed: () => _selectDateRange(context),
-            icon: const Icon(LucideIcons.filter, size: 14),
-            label: Text(
-              isCustom ? 'تغيير النطاق' : 'تحديد من - إلى',
-              style: const TextStyle(
-                fontFamily: 'Cairo',
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.royalBlue,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
+            ],
           ),
         ],
       ),
@@ -1170,9 +999,9 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSubtle),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Column(
         children: [
@@ -1183,7 +1012,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
           ),
           const SizedBox(height: 12),
           const Text(
-            'لا توجد حصص تدريبية مسجلة في هذا النطاق',
+            'لا توجد حصص تدريبية مسجلة في هذا الشهر',
             style: TextStyle(
               fontFamily: 'Cairo',
               fontSize: 14,
@@ -1193,7 +1022,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
           ),
           const SizedBox(height: 4),
           const Text(
-            'يمكنك تغيير الشهر أو اختيار نطاق تواريخ آخر من الأعلى، أو بدء تحضير تمرين ميداني جديد.',
+            'اختر شهراً آخر من الأعلى أو ابدأ تحضير تمرين ميداني جديد للفئة.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'Cairo',
@@ -1201,21 +1030,6 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
               color: AppColors.textSecondary,
             ),
           ),
-          const SizedBox(height: 14),
-          if (_customStartDate != null)
-            ElevatedButton.icon(
-              onPressed: _clearDateRangeFilter,
-              icon: const Icon(LucideIcons.rotateCcw, size: 14),
-              label: const Text(
-                'العودة للشهر الحالي',
-                style: TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.bold),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.royalBlue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
         ],
       ),
     );
@@ -1228,25 +1042,29 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
   ) {
     final arabicDate = _formatArabicDate(session.date);
     final periodName = switch (session.period) {
-      'morning' => '☀️ تمرين صباحي',
-      'evening' => '🌙 تمرين مسائي',
-      'extra' => '⚡ فترة خاصة',
+      'morning' => 'تمرين صباحي',
+      'evening' => 'تمرين مسائي',
+      'extra' => 'فترة خاصة',
       _ => 'حصة تدريبية',
+    };
+    final periodIcon = switch (session.period) {
+      'morning' => LucideIcons.sunMedium,
+      'evening' => LucideIcons.moon,
+      'extra' => LucideIcons.zap,
+      _ => LucideIcons.dumbbell,
     };
     final rate = session.attendanceRate.round();
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: session.isApproved
-              ? AppColors.present.withValues(alpha: 0.3)
-              : AppColors.borderSubtle,
+          color: const Color(0xFFE2E8F0),
         ),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x07000000),
+            color: Color(0x06000000),
             blurRadius: 6,
             offset: Offset(0, 2),
           ),
@@ -1275,17 +1093,18 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
             }
           },
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Top row: Date + Period badge + Approval badge
+                // Session Header
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
-                        color: AppColors.royalBlue.withValues(alpha: 0.08),
+                        color: AppColors.royalBlue.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
@@ -1310,110 +1129,43 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                           ),
                           Row(
                             children: [
+                              Icon(periodIcon, size: 12, color: AppColors.royalBlue),
+                              const SizedBox(width: 4),
                               Text(
                                 periodName,
                                 style: const TextStyle(
                                   fontFamily: 'Cairo',
                                   fontSize: 10.5,
-                                  color: AppColors.textSecondary,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.royalBlue,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              const Text('•', style: TextStyle(color: AppColors.textSecondary)),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  session.location,
-                                  style: const TextStyle(
-                                    fontFamily: 'Cairo',
-                                    fontSize: 10.5,
-                                    color: AppColors.textSecondary,
+                              if (session.location.isNotEmpty) ...[
+                                const SizedBox(width: 6),
+                                const Text('•', style: TextStyle(color: AppColors.textSecondary, fontSize: 10)),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    session.location,
+                                    style: const TextStyle(
+                                      fontFamily: 'Cairo',
+                                      fontSize: 10.5,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
+                              ],
                             ],
                           ),
                         ],
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                       decoration: BoxDecoration(
-                        color: session.isApproved
-                            ? AppColors.presentBackground
-                            : AppColors.excusedBackground,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            session.isApproved
-                                ? LucideIcons.badgeCheck
-                                : LucideIcons.clock,
-                            size: 13,
-                            color: session.isApproved
-                                ? AppColors.present
-                                : AppColors.excused,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            session.isApproved ? 'معتمد' : 'مسودة',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: session.isApproved
-                                  ? AppColors.present
-                                  : AppColors.excused,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // Attendance Status Pills Row
-                Row(
-                  children: [
-                    _buildStatPill(
-                      label: 'حاضر',
-                      count: session.presentCount,
-                      color: AppColors.present,
-                      bgColor: AppColors.presentBackground,
-                    ),
-                    const SizedBox(width: 6),
-                    _buildStatPill(
-                      label: 'معذور',
-                      count: session.excusedCount,
-                      color: AppColors.excused,
-                      bgColor: AppColors.excusedBackground,
-                    ),
-                    const SizedBox(width: 6),
-                    _buildStatPill(
-                      label: 'غياب',
-                      count: session.unexcusedCount,
-                      color: AppColors.unexcused,
-                      bgColor: AppColors.unexcusedBackground,
-                    ),
-                    if (session.lateCount > 0) ...[
-                      const SizedBox(width: 6),
-                      _buildStatPill(
-                        label: 'تأخير',
-                        count: session.lateCount,
-                        color: const Color(0xFFD97706),
-                        bgColor: const Color(0xFFFEF3C7),
-                      ),
-                    ],
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: (rate >= 80 ? AppColors.present : AppColors.excused).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
+                        color: rate >= 80 ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         'حضور $rate%',
@@ -1421,41 +1173,83 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                           fontFamily: 'Cairo',
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: rate >= 80 ? AppColors.present : AppColors.excused,
+                          color: rate >= 80 ? const Color(0xFF16A34A) : const Color(0xFFD97706),
                         ),
                       ),
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 10),
-                const Divider(height: 1, color: AppColors.borderSubtle),
+
+                // Attendance Status Pills Row with Wrap to prevent ANY yellow stripes/overflow
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _buildStatPill(
+                      label: 'حاضر',
+                      count: session.presentCount,
+                      color: const Color(0xFF16A34A),
+                      bgColor: const Color(0xFFDCFCE7),
+                    ),
+                    _buildStatPill(
+                      label: 'معذور',
+                      count: session.excusedCount,
+                      color: const Color(0xFFD97706),
+                      bgColor: const Color(0xFFFEF3C7),
+                    ),
+                    _buildStatPill(
+                      label: 'غياب',
+                      count: session.unexcusedCount,
+                      color: const Color(0xFFDC2626),
+                      bgColor: const Color(0xFFFEE2E2),
+                    ),
+                    if (session.lateCount > 0)
+                      _buildStatPill(
+                        label: 'تأخير',
+                        count: session.lateCount,
+                        color: const Color(0xFF9333EA),
+                        bgColor: const Color(0xFFF3E8FF),
+                      ),
+                  ],
+                ),
+
+                const SizedBox(height: 10),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
                 const SizedBox(height: 8),
 
-                // Bottom row: Review & Drill-down button
+                // Bottom row: Players count & View button
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'إجمالي اللاعبين بالكشف: ${session.totalPlayers}',
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 10.5,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
                     Row(
                       children: [
+                        const Icon(LucideIcons.users, size: 14, color: AppColors.textSecondary),
+                        const SizedBox(width: 4),
                         Text(
-                          session.isApproved ? 'عرض الكشف' : 'مراجعة واعتماد الكشف',
+                          'إجمالي اللاعبين: ${session.totalPlayers}',
                           style: const TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 10.5,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Row(
+                      children: [
+                        Text(
+                          'عرض الكشف',
+                          style: TextStyle(
                             fontFamily: 'Cairo',
                             fontSize: 11.5,
                             fontWeight: FontWeight.bold,
                             color: AppColors.royalBlue,
                           ),
                         ),
-                        const SizedBox(width: 4),
-                        const Icon(
+                        SizedBox(width: 4),
+                        Icon(
                           LucideIcons.chevronLeft,
                           size: 15,
                           color: AppColors.royalBlue,
@@ -2192,27 +1986,26 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(
-                    LucideIcons.fileSpreadsheet,
-                    size: 18,
-                    color: AppColors.royalBlue,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    'خلاصة حضور وانضباط اللاعبين',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ],
+              const Icon(
+                LucideIcons.fileSpreadsheet,
+                size: 18,
+                color: AppColors.royalBlue,
               ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'خلاصة حضور وانضباط اللاعبين',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(

@@ -673,6 +673,10 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
                 ),
                 onPressed: () {
                   HapticFeedback.lightImpact();
+                  if (!session.isLocked && session.unmarkedCount > 0) {
+                    _showUnmarkedPlayersWarning(context, session);
+                    return;
+                  }
                   widget.onReview();
                 },
                 child: Row(
@@ -701,6 +705,63 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showUnmarkedPlayersWarning(
+    BuildContext context,
+    AttendanceSession session,
+  ) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(LucideIcons.alertTriangle, color: Color(0xFFD97706), size: 24),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'الرصد الميداني غير مكتمل',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'لا يمكن إنهاء أو ترحيل الكشف قبل رصد جميع اللاعبين.\n\nتبقّى لديك ${session.unmarkedCount} من أصل ${session.totalCount} لاعباً لم يتم تحديد حالتهم (حاضر، غائب، أو بعذر).',
+          style: const TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: 13,
+            height: 1.5,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.royalBlue,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text(
+              'إكمال رصد الحضور',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -148,18 +148,6 @@ class AttendancePlayerCard extends StatelessWidget {
   }
 
   Widget _buildStatusTag() {
-    if (item.statusTag != null) {
-      return Text(
-        item.statusTag!,
-        style: const TextStyle(
-          fontFamily: 'Cairo',
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          color: AppColors.present,
-        ),
-      );
-    }
-
     return switch (item.status) {
       PlayerAttendanceStatus.present => const Text(
           'حاضر للمران',
@@ -169,25 +157,29 @@ class AttendancePlayerCard extends StatelessWidget {
             fontWeight: FontWeight.w700,
             color: AppColors.present,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       PlayerAttendanceStatus.excused => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
           decoration: BoxDecoration(
             color: AppColors.excusedBackground,
             borderRadius: BorderRadius.circular(4),
           ),
-          child: Text(
-            item.notes ?? 'إصابة عضلية',
-            style: const TextStyle(
+          child: const Text(
+            'بعذر',
+            style: TextStyle(
               fontFamily: 'Cairo',
               fontSize: 10,
               fontWeight: FontWeight.w700,
               color: AppColors.excused,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       PlayerAttendanceStatus.unexcused => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
           decoration: BoxDecoration(
             color: AppColors.unexcusedBackground,
             borderRadius: BorderRadius.circular(4),
@@ -200,6 +192,8 @@ class AttendancePlayerCard extends StatelessWidget {
               fontWeight: FontWeight.w700,
               color: AppColors.unexcused,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       PlayerAttendanceStatus.unmarked => const Text(
@@ -209,6 +203,8 @@ class AttendancePlayerCard extends StatelessWidget {
             fontSize: 10,
             color: AppColors.textSecondary,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
     };
   }

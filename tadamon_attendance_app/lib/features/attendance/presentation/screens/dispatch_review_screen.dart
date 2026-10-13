@@ -337,6 +337,60 @@ class DispatchReviewScreen extends StatelessWidget {
       );
 
   Future<void> _dispatch(BuildContext context) async {
+    final state = context.read<AttendanceBloc>().state;
+    if (state is AttendanceReady && state.session.unmarkedCount > 0) {
+      showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(LucideIcons.alertTriangle, color: Color(0xFFD97706), size: 24),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'تعذر الترحيل: كشف غير مكتمل',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'لا يمكن ترحيل التمرين واعتماده إدارياً حتى يتم رصد جميع اللاعبين.\n\nيوجد حالياً ${state.session.unmarkedCount} لاعبين لم يتم تحديد حالتهم (حاضر، غائب، أو بعذر).',
+            style: const TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 13,
+              height: 1.5,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.royalBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                if (onBack != null) onBack!();
+              },
+              child: const Text(
+                'العودة لرصد المتبقين',
+                style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     final confirmed = await showAppConfirmationDialog(
       context: context,
       title: 'ترحيل التمرين واعتماده إدارياً؟',
