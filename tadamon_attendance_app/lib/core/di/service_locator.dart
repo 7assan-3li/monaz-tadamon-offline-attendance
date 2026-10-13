@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart';
 import 'package:get_it/get_it.dart';
 import 'package:tadamon_attendance_app/core/database/app_database.dart';
 import 'package:tadamon_attendance_app/core/security/ed25519_verifier.dart';
@@ -39,6 +38,7 @@ import 'package:tadamon_attendance_app/features/sync/presentation/bloc/sync_bloc
 import 'package:tadamon_attendance_app/features/reports/data/datasources/audit_log_dao.dart';
 import 'package:tadamon_attendance_app/features/reports/data/datasources/excel_report_engine.dart';
 import 'package:tadamon_attendance_app/features/reports/data/datasources/pdf_report_engine.dart';
+import 'package:tadamon_attendance_app/features/reports/data/datasources/report_storage_service.dart';
 import 'package:tadamon_attendance_app/features/reports/data/repositories/reports_repository_impl.dart';
 import 'package:tadamon_attendance_app/features/reports/domain/repositories/reports_repository.dart';
 import 'package:tadamon_attendance_app/features/reports/domain/usecases/calculate_entitlement_use_case.dart';
@@ -181,6 +181,18 @@ void configureAttendanceDependencies() {
     ..registerLazySingleton<StartTodaySessionUseCase>(
       () => StartTodaySessionUseCase(serviceLocator<AttendanceRepository>()),
     )
+    ..registerLazySingleton<CreateSessionUseCase>(
+      () => CreateSessionUseCase(serviceLocator<AttendanceRepository>()),
+    )
+    ..registerLazySingleton<GetActiveDraftsUseCase>(
+      () => GetActiveDraftsUseCase(serviceLocator<AttendanceRepository>()),
+    )
+    ..registerLazySingleton<GetTodaySessionsUseCase>(
+      () => GetTodaySessionsUseCase(serviceLocator<AttendanceRepository>()),
+    )
+    ..registerLazySingleton<ReadSessionUseCase>(
+      () => ReadSessionUseCase(serviceLocator<AttendanceRepository>()),
+    )
     ..registerLazySingleton<MarkAllPresentUseCase>(
       () => MarkAllPresentUseCase(serviceLocator<AttendanceRepository>()),
     )
@@ -196,6 +208,9 @@ void configureAttendanceDependencies() {
         serviceLocator<MarkAllPresentUseCase>(),
         serviceLocator<UpdatePlayerStatusUseCase>(),
         serviceLocator<DispatchSessionUseCase>(),
+        createSession: serviceLocator<CreateSessionUseCase>(),
+        getActiveDrafts: serviceLocator<GetActiveDraftsUseCase>(),
+        readSession: serviceLocator<ReadSessionUseCase>(),
       ),
     );
 }
@@ -246,7 +261,13 @@ Future<void> configureMasterDependencies() async {
   serviceLocator
     ..registerLazySingleton<PinSecurity>(PinSecurity.new)
     ..registerLazySingleton<SettingsRepository>(
-      () => SettingsRepositoryImpl(database, serviceLocator<PinSecurity>()),
+      () => SettingsRepositoryImpl(
+        database,
+        serviceLocator<PinSecurity>(),
+        serviceLocator.isRegistered<SecureValueStore>()
+            ? serviceLocator<SecureValueStore>()
+            : null,
+      ),
     )
     ..registerFactory<SettingsBloc>(
       () => SettingsBloc(serviceLocator<SettingsRepository>()),
@@ -284,6 +305,7 @@ Future<void> configureMasterDependencies() async {
     ..registerLazySingleton<AuditLogDao>(() => AuditLogDao(database))
     ..registerLazySingleton<PdfReportEngine>(PdfReportEngine.new)
     ..registerLazySingleton<ExcelReportEngine>(ExcelReportEngine.new)
+    ..registerLazySingleton<ReportStorageService>(ReportStorageService.new)
     ..registerLazySingleton<CalculateEntitlementUseCase>(CalculateEntitlementUseCase.new)
     ..registerLazySingleton<ReportsRepository>(
       () => ReportsRepositoryImpl(
@@ -295,7 +317,11 @@ Future<void> configureMasterDependencies() async {
       ),
     )
     ..registerFactory<ReportsBloc>(
-      () => ReportsBloc(serviceLocator<ReportsRepository>()),
+      () => ReportsBloc(
+        serviceLocator<ReportsRepository>(),
+        storageService: serviceLocator<ReportStorageService>(),
+        settingsRepository: serviceLocator<SettingsRepository>(),
+      ),
     )
     ..registerLazySingleton<BackupLocalDataSource>(() => BackupLocalDataSource(database))
     ..registerLazySingleton<BackupRepository>(

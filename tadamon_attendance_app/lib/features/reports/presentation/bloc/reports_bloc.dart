@@ -1,10 +1,16 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:tadamon_attendance_app/features/reports/data/datasources/report_storage_service.dart';
 import 'package:tadamon_attendance_app/features/reports/domain/repositories/reports_repository.dart';
 import 'package:tadamon_attendance_app/features/reports/presentation/bloc/reports_event.dart';
 import 'package:tadamon_attendance_app/features/reports/presentation/bloc/reports_state.dart';
+import 'package:tadamon_attendance_app/features/settings/domain/repositories/settings_repository.dart';
 
 class ReportsBloc extends Bloc<ReportsEvent, ReportsState> {
-  ReportsBloc(this._repository) : super(const ReportsInitial()) {
+  ReportsBloc(
+    this._repository, {
+    this.storageService,
+    this.settingsRepository,
+  }) : super(const ReportsInitial()) {
     on<LoadReportsHubEvent>(_onLoadReportsHub);
     on<ApproveSessionEvent>(_onApproveSession);
     on<SubmitExceptionalEditEvent>(_onSubmitExceptionalEdit);
@@ -15,6 +21,8 @@ class ReportsBloc extends Bloc<ReportsEvent, ReportsState> {
   }
 
   final ReportsRepository _repository;
+  final ReportStorageService? storageService;
+  final SettingsRepository? settingsRepository;
 
   Future<void> _onLoadReportsHub(
     LoadReportsHubEvent event,
@@ -26,11 +34,13 @@ class ReportsBloc extends Bloc<ReportsEvent, ReportsState> {
         teamId: event.teamId,
         year: event.year,
         month: event.month,
+        period: event.period,
       );
       final summary = await _repository.getAdminSummaryReport(
         teamId: event.teamId,
         year: event.year,
         month: event.month,
+        period: event.period,
       );
       final auditLogs = await _repository.getAuditLogs();
 
@@ -126,10 +136,40 @@ class ReportsBloc extends Bloc<ReportsEvent, ReportsState> {
 
     try {
       final pdfBytes = await _repository.generateMonthlySheetPdf(current.sheet);
+      String? savedFilePath;
+      String? fileName;
+      bool autoShareTriggered = false;
+
+      if (storageService != null) {
+        final settings = await settingsRepository?.read();
+        final sanitizedTeam = current.sheet.teamName.replaceAll(' ', '_');
+        fileName = 'كشف_حضور_${sanitizedTeam}_${current.sheet.month.year}_${current.sheet.month.month}.pdf';
+        final file = await storageService!.saveReportFile(
+          fileName: fileName,
+          bytes: pdfBytes,
+          customDirectory: settings?.reportsExportPath,
+        );
+        savedFilePath = file.path;
+        if (settings?.autoShareOnExport == true) {
+          autoShareTriggered = true;
+          storageService!.shareReportFile(
+            file.path,
+            subject: 'حافظة تحضير نادي تضامن حضرموت',
+            text: 'مرفق حافظة تحضير نادي تضامن حضرموت - ${current.sheet.teamName}',
+          ).ignore();
+        }
+      }
+
       emit(
         current.copyWith(
           exportedPdfBytes: pdfBytes,
-          actionMessage: 'تم تجهيز ملف حافظة التحضير (PDF) بنجاح.',
+          exportedFilePath: savedFilePath,
+          exportedFileName: fileName,
+          isPdf: true,
+          autoShareTriggered: autoShareTriggered,
+          actionMessage: savedFilePath != null
+              ? 'تم تصدير وحفظ كشف الحضور بنجاح في: $savedFilePath'
+              : 'تم تجهيز ملف حافظة التحضير (PDF) بنجاح.',
         ),
       );
     } catch (e) {
@@ -146,10 +186,40 @@ class ReportsBloc extends Bloc<ReportsEvent, ReportsState> {
 
     try {
       final pdfBytes = await _repository.generateAdminSummaryPdf(current.summary);
+      String? savedFilePath;
+      String? fileName;
+      bool autoShareTriggered = false;
+
+      if (storageService != null) {
+        final settings = await settingsRepository?.read();
+        final sanitizedTeam = current.summary.teamName.replaceAll(' ', '_');
+        fileName = 'خلاصة_الإداري_${sanitizedTeam}_${current.summary.month.year}_${current.summary.month.month}.pdf';
+        final file = await storageService!.saveReportFile(
+          fileName: fileName,
+          bytes: pdfBytes,
+          customDirectory: settings?.reportsExportPath,
+        );
+        savedFilePath = file.path;
+        if (settings?.autoShareOnExport == true) {
+          autoShareTriggered = true;
+          storageService!.shareReportFile(
+            file.path,
+            subject: 'خلاصة الإداري - نادي تضامن حضرموت',
+            text: 'مرفق كشف التحضير وخلاصة الإداري الرسمية - ${current.summary.teamName}',
+          ).ignore();
+        }
+      }
+
       emit(
         current.copyWith(
           exportedPdfBytes: pdfBytes,
-          actionMessage: 'تم تجهيز كشف التحضير وخلاصة الإداري (PDF) بنجاح.',
+          exportedFilePath: savedFilePath,
+          exportedFileName: fileName,
+          isPdf: true,
+          autoShareTriggered: autoShareTriggered,
+          actionMessage: savedFilePath != null
+              ? 'تم تصدير وحفظ خلاصة الإداري بنجاح في: $savedFilePath'
+              : 'تم تجهيز كشف التحضير وخلاصة الإداري (PDF) بنجاح.',
         ),
       );
     } catch (e) {
@@ -166,10 +236,40 @@ class ReportsBloc extends Bloc<ReportsEvent, ReportsState> {
 
     try {
       final excelBytes = await _repository.generateAdminSummaryExcel(current.summary);
+      String? savedFilePath;
+      String? fileName;
+      bool autoShareTriggered = false;
+
+      if (storageService != null) {
+        final settings = await settingsRepository?.read();
+        final sanitizedTeam = current.summary.teamName.replaceAll(' ', '_');
+        fileName = 'خلاصة_الإداري_${sanitizedTeam}_${current.summary.month.year}_${current.summary.month.month}.xlsx';
+        final file = await storageService!.saveReportFile(
+          fileName: fileName,
+          bytes: excelBytes,
+          customDirectory: settings?.reportsExportPath,
+        );
+        savedFilePath = file.path;
+        if (settings?.autoShareOnExport == true) {
+          autoShareTriggered = true;
+          storageService!.shareReportFile(
+            file.path,
+            subject: 'تقرير إكسل - نادي تضامن حضرموت',
+            text: 'مرفق تقرير إكسل لخلاصة الإداري - ${current.summary.teamName}',
+          ).ignore();
+        }
+      }
+
       emit(
         current.copyWith(
           exportedExcelBytes: excelBytes,
-          actionMessage: 'تم تجهيز ملف Excel الميداني (XLSX) بنجاح.',
+          exportedFilePath: savedFilePath,
+          exportedFileName: fileName,
+          isPdf: false,
+          autoShareTriggered: autoShareTriggered,
+          actionMessage: savedFilePath != null
+              ? 'تم تصدير وحفظ تقرير Excel بنجاح في: $savedFilePath'
+              : 'تم تجهيز ملف Excel الميداني (XLSX) بنجاح.',
         ),
       );
     } catch (e) {

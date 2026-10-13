@@ -2,7 +2,19 @@ import 'package:tadamon_attendance_app/features/attendance/domain/entities/atten
 import 'package:tadamon_attendance_app/features/attendance/domain/entities/player_attendance_item.dart';
 
 abstract interface class AttendanceRepository {
-  Future<AttendanceSession> startTodaySession(String teamId);
+  Future<AttendanceSession> startTodaySession(
+    String teamId, {
+    String period = 'مسائي',
+    String? location,
+  });
+  Future<AttendanceSession> createSession({
+    required String teamId,
+    String period = 'مسائي',
+    String? location,
+    String? sessionTitle,
+  });
+  Future<List<AttendanceSession>> getActiveDrafts({String? teamId});
+  Future<List<AttendanceSession>> getTodaySessions({String? teamId});
   Future<AttendanceSession?> readSession(String sessionUuid);
   Future<AttendanceSession> markAllPresent(String sessionUuid);
   Future<AttendanceSession> updateStatus(

@@ -23,12 +23,14 @@ abstract interface class ReportsRepository {
     required String teamId,
     required int year,
     required int month,
+    String? period,
   });
 
   Future<AdminSummaryReport> getAdminSummaryReport({
     required String teamId,
     required int year,
     required int month,
+    String? period,
   });
 
   Future<List<int>> generateMonthlySheetPdf(MonthlyAttendanceSheet sheet);

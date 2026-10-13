@@ -5,8 +5,52 @@ import 'package:tadamon_attendance_app/features/attendance/domain/repositories/a
 class StartTodaySessionUseCase {
   const StartTodaySessionUseCase(this.repository);
   final AttendanceRepository repository;
-  Future<AttendanceSession> call(String teamId) =>
-      repository.startTodaySession(teamId);
+  Future<AttendanceSession> call(
+    String teamId, {
+    String period = 'مسائي',
+    String? location,
+  }) => repository.startTodaySession(
+    teamId,
+    period: period,
+    location: location,
+  );
+}
+
+class CreateSessionUseCase {
+  const CreateSessionUseCase(this.repository);
+  final AttendanceRepository repository;
+  Future<AttendanceSession> call({
+    required String teamId,
+    String period = 'مسائي',
+    String? location,
+    String? sessionTitle,
+  }) => repository.createSession(
+    teamId: teamId,
+    period: period,
+    location: location,
+    sessionTitle: sessionTitle,
+  );
+}
+
+class GetActiveDraftsUseCase {
+  const GetActiveDraftsUseCase(this.repository);
+  final AttendanceRepository repository;
+  Future<List<AttendanceSession>> call({String? teamId}) =>
+      repository.getActiveDrafts(teamId: teamId);
+}
+
+class GetTodaySessionsUseCase {
+  const GetTodaySessionsUseCase(this.repository);
+  final AttendanceRepository repository;
+  Future<List<AttendanceSession>> call({String? teamId}) =>
+      repository.getTodaySessions(teamId: teamId);
+}
+
+class ReadSessionUseCase {
+  const ReadSessionUseCase(this.repository);
+  final AttendanceRepository repository;
+  Future<AttendanceSession?> call(String sessionUuid) =>
+      repository.readSession(sessionUuid);
 }
 
 class MarkAllPresentUseCase {

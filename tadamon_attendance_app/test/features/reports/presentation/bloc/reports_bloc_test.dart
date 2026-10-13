@@ -162,6 +162,7 @@ class _MockReportsRepository implements ReportsRepository {
     required String teamId,
     required int year,
     required int month,
+    String? period,
   }) async => dummySheet;
 
   @override
@@ -169,6 +170,7 @@ class _MockReportsRepository implements ReportsRepository {
     required String teamId,
     required int year,
     required int month,
+    String? period,
   }) async => dummySummary;
 
   @override

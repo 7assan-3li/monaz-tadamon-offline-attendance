@@ -8,8 +8,37 @@ sealed class AttendanceEvent {
 }
 
 class StartTodaySessionEvent extends AttendanceEvent {
-  const StartTodaySessionEvent(this.teamId);
+  const StartTodaySessionEvent(
+    this.teamId, {
+    this.period = 'مسائي',
+    this.location,
+  });
   final String teamId;
+  final String period;
+  final String? location;
+}
+
+class CreateNewSessionEvent extends AttendanceEvent {
+  const CreateNewSessionEvent({
+    required this.teamId,
+    this.period = 'مسائي',
+    this.location,
+    this.sessionTitle,
+  });
+  final String teamId;
+  final String period;
+  final String? location;
+  final String? sessionTitle;
+}
+
+class LoadActiveDraftsEvent extends AttendanceEvent {
+  const LoadActiveDraftsEvent({this.teamId});
+  final String? teamId;
+}
+
+class SwitchActiveSessionEvent extends AttendanceEvent {
+  const SwitchActiveSessionEvent(this.sessionUuid);
+  final String sessionUuid;
 }
 
 class MarkAllPresentEvent extends AttendanceEvent {
@@ -47,8 +76,20 @@ class AttendanceLoading extends AttendanceState {
 }
 
 class AttendanceReady extends AttendanceState {
-  const AttendanceReady(this.session);
+  const AttendanceReady(
+    this.session, {
+    this.activeDrafts = const [],
+  });
   final AttendanceSession session;
+  final List<AttendanceSession> activeDrafts;
+
+  AttendanceReady copyWith({
+    AttendanceSession? session,
+    List<AttendanceSession>? activeDrafts,
+  }) => AttendanceReady(
+    session ?? this.session,
+    activeDrafts: activeDrafts ?? this.activeDrafts,
+  );
 }
 
 class AttendanceFailure extends AttendanceState {
@@ -57,16 +98,81 @@ class AttendanceFailure extends AttendanceState {
 }
 
 class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
-  AttendanceBloc(this._start, this._markAll, this._update, this._dispatch)
-    : super(const AttendanceInitial()) {
+  AttendanceBloc(
+    this._start,
+    this._markAll,
+    this._update,
+    this._dispatch, {
+    this.createSession,
+    this.getActiveDrafts,
+    this.readSession,
+  }) : super(const AttendanceInitial()) {
     on<StartTodaySessionEvent>(
-      (event, emit) async =>
-          _run(emit, () => _start(event.teamId), loading: true),
+      (event, emit) async => _runWithDrafts(
+        emit,
+        () => _start(
+          event.teamId,
+          period: event.period,
+          location: event.location,
+        ),
+        loading: true,
+        teamId: event.teamId,
+      ),
     );
+
+    on<CreateNewSessionEvent>(
+      (event, emit) async => _runWithDrafts(
+        emit,
+        () async {
+          if (createSession != null) {
+            return createSession!(
+              teamId: event.teamId,
+              period: event.period,
+              location: event.location,
+              sessionTitle: event.sessionTitle,
+            );
+          }
+          return _start(
+            event.teamId,
+            period: event.period,
+            location: event.location,
+          );
+        },
+        loading: true,
+        teamId: event.teamId,
+      ),
+    );
+
+    on<SwitchActiveSessionEvent>((event, emit) async {
+      final reader = readSession;
+      if (reader == null) return;
+      try {
+        emit(const AttendanceLoading());
+        final session = await reader(event.sessionUuid);
+        if (session != null) {
+          final drafts = await _loadDrafts(session.teamId);
+          emit(AttendanceReady(session, activeDrafts: drafts));
+        }
+      } on Object catch (error) {
+        emit(AttendanceFailure(error.toString()));
+      }
+    });
+
+    on<LoadActiveDraftsEvent>((event, emit) async {
+      final current = state;
+      if (current is AttendanceReady) {
+        final drafts = await _loadDrafts(
+          event.teamId ?? current.session.teamId,
+        );
+        emit(current.copyWith(activeDrafts: drafts));
+      }
+    });
+
     on<MarkAllPresentEvent>(
       (event, emit) async =>
           _runCurrent(emit, (session) => _markAll(session.sessionUuid)),
     );
+
     on<UpdatePlayerStatusEvent>(
       (event, emit) async => _runCurrent(emit, (session) {
         final item = session.items.firstWhere(
@@ -75,38 +181,64 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
         return _update(session.sessionUuid, item.playerId, item.status.next);
       }),
     );
+
     on<SetPlayerAttendanceStatusEvent>(
       (event, emit) async => _runCurrent(
         emit,
         (session) => _update(session.sessionUuid, event.playerId, event.status),
       ),
     );
+
     on<DispatchSessionEvent>(
       (event, emit) async =>
           _runCurrent(emit, (session) => _dispatch(session.sessionUuid)),
     );
   }
+
   final StartTodaySessionUseCase _start;
   final MarkAllPresentUseCase _markAll;
   final UpdatePlayerStatusUseCase _update;
   final DispatchSessionUseCase _dispatch;
+  final CreateSessionUseCase? createSession;
+  final GetActiveDraftsUseCase? getActiveDrafts;
+  final ReadSessionUseCase? readSession;
+
+  Future<List<AttendanceSession>> _loadDrafts(String? teamId) async {
+    final getter = getActiveDrafts;
+    if (getter == null) return const [];
+    try {
+      return await getter(teamId: teamId);
+    } catch (_) {
+      return const [];
+    }
+  }
+
   Future<void> _runCurrent(
     Emitter<AttendanceState> emit,
     Future<AttendanceSession> Function(AttendanceSession) action,
   ) async {
     final current = state;
     if (current is! AttendanceReady || current.session.isLocked) return;
-    await _run(emit, () => action(current.session));
+    try {
+      final updatedSession = await action(current.session);
+      final drafts = await _loadDrafts(updatedSession.teamId);
+      emit(AttendanceReady(updatedSession, activeDrafts: drafts));
+    } on Object catch (error) {
+      emit(AttendanceFailure(error.toString()));
+    }
   }
 
-  Future<void> _run(
+  Future<void> _runWithDrafts(
     Emitter<AttendanceState> emit,
     Future<AttendanceSession> Function() action, {
     bool loading = false,
+    String? teamId,
   }) async {
     try {
       if (loading) emit(const AttendanceLoading());
-      emit(AttendanceReady(await action()));
+      final session = await action();
+      final drafts = await _loadDrafts(teamId ?? session.teamId);
+      emit(AttendanceReady(session, activeDrafts: drafts));
     } on Object catch (error) {
       emit(AttendanceFailure(error.toString()));
     }

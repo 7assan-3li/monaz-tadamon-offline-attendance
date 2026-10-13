@@ -21,6 +21,10 @@ final class ReportsLoaded extends ReportsState {
     this.auditLogs = const [],
     this.exportedPdfBytes,
     this.exportedExcelBytes,
+    this.exportedFilePath,
+    this.exportedFileName,
+    this.isPdf,
+    this.autoShareTriggered = false,
     this.actionMessage,
   });
 
@@ -29,6 +33,10 @@ final class ReportsLoaded extends ReportsState {
   final List<AuditEntry> auditLogs;
   final List<int>? exportedPdfBytes;
   final List<int>? exportedExcelBytes;
+  final String? exportedFilePath;
+  final String? exportedFileName;
+  final bool? isPdf;
+  final bool autoShareTriggered;
   final String? actionMessage;
 
   ReportsLoaded copyWith({
@@ -37,6 +45,10 @@ final class ReportsLoaded extends ReportsState {
     List<AuditEntry>? auditLogs,
     List<int>? exportedPdfBytes,
     List<int>? exportedExcelBytes,
+    String? exportedFilePath,
+    String? exportedFileName,
+    bool? isPdf,
+    bool? autoShareTriggered,
     String? actionMessage,
   }) {
     return ReportsLoaded(
@@ -45,6 +57,10 @@ final class ReportsLoaded extends ReportsState {
       auditLogs: auditLogs ?? this.auditLogs,
       exportedPdfBytes: exportedPdfBytes ?? this.exportedPdfBytes,
       exportedExcelBytes: exportedExcelBytes ?? this.exportedExcelBytes,
+      exportedFilePath: exportedFilePath ?? this.exportedFilePath,
+      exportedFileName: exportedFileName ?? this.exportedFileName,
+      isPdf: isPdf ?? this.isPdf,
+      autoShareTriggered: autoShareTriggered ?? this.autoShareTriggered,
       actionMessage: actionMessage,
     );
   }

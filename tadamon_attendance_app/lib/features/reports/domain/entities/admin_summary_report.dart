@@ -36,6 +36,7 @@ final class AdminSummaryReport {
     required this.clubDirectorName,
     required this.totalSessions,
     required this.rows,
+    this.periodLabel = 'جميع الفترات التدريبية',
   });
 
   final String clubName;
@@ -46,4 +47,5 @@ final class AdminSummaryReport {
   final String clubDirectorName;
   final int totalSessions;
   final List<PlayerSummaryRow> rows;
+  final String periodLabel;
 }

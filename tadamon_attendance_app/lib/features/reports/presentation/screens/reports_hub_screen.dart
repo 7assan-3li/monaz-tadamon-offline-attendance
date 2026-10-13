@@ -9,6 +9,7 @@ import 'package:tadamon_attendance_app/features/reports/presentation/bloc/report
 import 'package:tadamon_attendance_app/features/reports/presentation/bloc/reports_event.dart';
 import 'package:tadamon_attendance_app/features/reports/presentation/bloc/reports_state.dart';
 import 'package:tadamon_attendance_app/features/reports/presentation/screens/audit_logs_screen.dart';
+import 'package:tadamon_attendance_app/features/reports/presentation/widgets/export_success_bottom_sheet.dart';
 
 class ReportsHubScreen extends StatefulWidget {
   const ReportsHubScreen({
@@ -27,6 +28,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
   String _selectedTeamId = 'team-first';
   int _selectedYear = 2026;
   int _selectedMonth = 10;
+  String _selectedPeriod = 'all'; // 'all', 'morning', 'evening', 'extra'
 
   static const List<Map<String, String>> _squads = [
     {
@@ -74,6 +76,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
             teamId: _selectedTeamId,
             year: _selectedYear,
             month: _selectedMonth,
+            period: _selectedPeriod == 'all' ? null : _selectedPeriod,
           ),
         );
   }
@@ -82,17 +85,26 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
   Widget build(BuildContext context) {
     return BlocConsumer<ReportsBloc, ReportsState>(
       listener: (context, state) {
-        if (state is ReportsLoaded && state.actionMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                state.actionMessage!,
-                style: const TextStyle(fontFamily: 'Cairo'),
+        if (state is ReportsLoaded) {
+          if (state.exportedFilePath != null) {
+            ExportSuccessBottomSheet.show(
+              context,
+              filePath: state.exportedFilePath!,
+              fileName: state.exportedFileName ?? 'التقرير_الميداني',
+              isPdf: state.isPdf ?? true,
+            );
+          } else if (state.actionMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  state.actionMessage!,
+                  style: const TextStyle(fontFamily: 'Cairo'),
+                ),
+                backgroundColor: AppColors.royalBlue,
+                duration: const Duration(seconds: 3),
               ),
-              backgroundColor: AppColors.royalBlue,
-              duration: const Duration(seconds: 3),
-            ),
-          );
+            );
+          }
         } else if (state is ReportsError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -247,8 +259,16 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
         _buildScreenTitle(),
         const SizedBox(height: 12),
 
+        // System Integration Quick Links
+        _buildSystemIntegrationBar(),
+        const SizedBox(height: 12),
+
         // 2. Selectors: Period & Squad (تفاعلية لاختيار الشهر والتشكيلة)
         _buildSelectorsRow(),
+        const SizedBox(height: 10),
+
+        // 3. Training Period Filter Chips (فلترة الفترات التدريبية)
+        _buildPeriodFilterChips(),
         const SizedBox(height: 12),
 
         // 4. Segmented Control Switcher
@@ -269,7 +289,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
           const SizedBox(height: 14),
           _buildAccreditationCard(),
           const SizedBox(height: 14),
-          _buildExcelExportCard(context),
+          _buildSummaryExportCard(context),
         ],
         const SizedBox(height: 24),
       ],
@@ -526,6 +546,52 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPeriodFilterChips() {
+    final periods = [
+      {'key': 'all', 'label': 'جميع الفترات', 'icon': LucideIcons.layers},
+      {'key': 'morning', 'label': '☀️ تمرين صباحي', 'icon': LucideIcons.sun},
+      {'key': 'evening', 'label': '🌙 تمرين مسائي', 'icon': LucideIcons.moon},
+      {'key': 'extra', 'label': '⚡ فترة خاصة', 'icon': LucideIcons.zap},
+    ];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: periods.map((p) {
+          final isSelected = _selectedPeriod == p['key'];
+          return Padding(
+            padding: const EdgeInsetsDirectional.only(end: 8),
+            child: ChoiceChip(
+              label: Text(
+                p['label'] as String,
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected ? Colors.white : AppColors.textPrimary,
+                ),
+              ),
+              selected: isSelected,
+              selectedColor: AppColors.royalBlue,
+              backgroundColor: AppColors.surface,
+              side: BorderSide(
+                color: isSelected ? AppColors.royalBlue : AppColors.borderSubtle,
+              ),
+              onSelected: (selected) {
+                if (selected && _selectedPeriod != p['key']) {
+                  setState(() {
+                    _selectedPeriod = p['key'] as String;
+                  });
+                  _loadReportsData();
+                }
+              },
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 
@@ -1024,7 +1090,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                     color: AppColors.royalBlue,
                   ),
                   SizedBox(width: 8),
-                  const Text(
+                  Text(
                     'جدول الحضور اليومي',
                     style: TextStyle(
                       fontFamily: 'Cairo',
@@ -1330,7 +1396,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                     color: AppColors.royalBlue,
                   ),
                   SizedBox(width: 8),
-                  const Text(
+                  Text(
                     'خلاصة حضور وانضباط اللاعبين',
                     style: TextStyle(
                       fontFamily: 'Cairo',
@@ -1623,7 +1689,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                     color: AppColors.royalBlue,
                   ),
                   SizedBox(width: 6),
-                  const Text(
+                  Text(
                     'المصادقة الإدارية الرسمية',
                     style: TextStyle(
                       fontFamily: 'Cairo',
@@ -1634,7 +1700,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                   ),
                 ],
               ),
-              const Text(
+              Text(
                 'توثيق معتمد',
                 style: TextStyle(
                   fontFamily: 'Cairo',
@@ -1863,8 +1929,8 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
     );
   }
 
-  /// Excel Export Card for Tab 1
-  Widget _buildExcelExportCard(BuildContext context) {
+  /// Official Summary Export Card for Tab 1 (PDF & Excel)
+  Widget _buildSummaryExportCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1882,11 +1948,11 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                   Icon(
                     LucideIcons.fileSpreadsheet,
                     size: 16,
-                    color: AppColors.present,
+                    color: AppColors.royalBlue,
                   ),
                   SizedBox(width: 6),
                   Text(
-                    'تصدير الخلاصة الإدارية',
+                    'تصدير كشف التحضير والخلاصة الإدارية',
                     style: TextStyle(
                       fontFamily: 'Cairo',
                       fontSize: 12,
@@ -1897,20 +1963,51 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                 ],
               ),
               Text(
-                'ملف Excel',
+                'خيارات رسمية',
                 style: TextStyle(
                   fontFamily: 'Cairo',
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.present,
+                  color: AppColors.royalBlue,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
+          // Button 1: PDF
           SizedBox(
             width: double.infinity,
-            height: 50,
+            height: 48,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.royalBlue,
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                context
+                    .read<ReportsBloc>()
+                    .add(const ExportAdminSummaryPdfEvent());
+              },
+              icon: const Icon(LucideIcons.fileText, size: 18, color: Colors.white),
+              label: const Text(
+                'تصدير خلاصة الإداري (PDF الرسمية)',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Button 2: Excel
+          SizedBox(
+            width: double.infinity,
+            height: 48,
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.present,
@@ -1924,12 +2021,12 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                     .read<ReportsBloc>()
                     .add(const ExportAdminSummaryExcelEvent());
               },
-              icon: const Icon(LucideIcons.download, size: 20, color: Colors.white),
+              icon: const Icon(LucideIcons.download, size: 18, color: Colors.white),
               label: const Text(
-                'تصدير الخلاصة (Excel)',
+                'تصدير كشف الجداول (Excel XLSX)',
                 style: TextStyle(
                   fontFamily: 'Cairo',
-                  fontSize: 13,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),

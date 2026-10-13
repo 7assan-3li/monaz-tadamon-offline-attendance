@@ -32,6 +32,7 @@ final class MonthlyAttendanceSheet {
     required this.sessionDates,
     required this.records,
     required this.totalSessions,
+    this.periodLabel = 'جميع الفترات التدريبية',
   });
 
   final String teamId;
@@ -40,4 +41,5 @@ final class MonthlyAttendanceSheet {
   final List<DateTime> sessionDates;
   final List<PlayerMonthlyRecord> records;
   final int totalSessions;
+  final String periodLabel;
 }

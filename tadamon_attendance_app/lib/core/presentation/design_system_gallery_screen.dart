@@ -74,6 +74,9 @@ class _DesignSystemGalleryScreenState extends State<DesignSystemGalleryScreen> {
 
           // 2. Hero Today's Session Card (Fully interactive & editable)
           _buildHeroSessionCard(context),
+          const SizedBox(height: 12),
+
+          _buildLiveCounters(),
           const SizedBox(height: 16),
 
           // 3. Quick Actions Grid

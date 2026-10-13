@@ -63,6 +63,7 @@ class ReportsRepositoryImpl implements ReportsRepository {
     required String teamId,
     required int year,
     required int month,
+    String? period,
   }) async {
     final team = await (database.select(database.teams)
           ..where((tbl) => tbl.id.equals(teamId)))
@@ -72,16 +73,22 @@ class ReportsRepositoryImpl implements ReportsRepository {
     final startDate = DateTime.utc(year, month, 1);
     final endDate = DateTime.utc(year, month + 1, 1);
 
-    // Fetch sessions in month
-    final sessions = await (database.select(database.sessions)
-          ..where((tbl) =>
-              tbl.teamId.equals(teamId) &
-              tbl.sessionDate.isBiggerOrEqualValue(startDate) &
-              tbl.sessionDate.isSmallerThanValue(endDate))
-          ..orderBy([
-            (tbl) => OrderingTerm(expression: tbl.sessionDate, mode: OrderingMode.asc),
-          ]))
-        .get();
+    // Fetch sessions in month with optional period filter
+    final sessionsQuery = database.select(database.sessions)
+      ..where((tbl) =>
+          tbl.teamId.equals(teamId) &
+          tbl.sessionDate.isBiggerOrEqualValue(startDate) &
+          tbl.sessionDate.isSmallerThanValue(endDate));
+
+    if (period != null && period.isNotEmpty && period != 'all') {
+      sessionsQuery.where((tbl) => tbl.period.equals(period));
+    }
+
+    sessionsQuery.orderBy([
+      (tbl) => OrderingTerm(expression: tbl.sessionDate, mode: OrderingMode.asc),
+    ]);
+
+    final sessions = await sessionsQuery.get();
 
     final sessionDates = sessions.map((s) => s.sessionDate).toList();
     final sessionUuids = sessions.map((s) => s.sessionUuid).toList();
@@ -159,6 +166,13 @@ class ReportsRepositoryImpl implements ReportsRepository {
       );
     }
 
+      final periodLabel = switch (period) {
+        'morning' => 'الفترة الصباحية',
+        'evening' => 'الفترة المسائية',
+        'extra' => 'فترة خاصة / إضافية',
+        _ => 'جميع الفترات التدريبية',
+      };
+
     return MonthlyAttendanceSheet(
       teamId: teamId,
       teamName: teamName,
@@ -166,6 +180,7 @@ class ReportsRepositoryImpl implements ReportsRepository {
       sessionDates: sessionDates,
       records: playerRecords,
       totalSessions: sessions.length,
+      periodLabel: periodLabel,
     );
   }
 
@@ -174,6 +189,7 @@ class ReportsRepositoryImpl implements ReportsRepository {
     required String teamId,
     required int year,
     required int month,
+    String? period,
   }) async {
     final settings = await (database.select(database.clubSettings)..limit(1)).getSingleOrNull();
     final team = await (database.select(database.teams)..where((tbl) => tbl.id.equals(teamId))).getSingleOrNull();
@@ -187,12 +203,17 @@ class ReportsRepositoryImpl implements ReportsRepository {
     final startDate = DateTime.utc(year, month, 1);
     final endDate = DateTime.utc(year, month + 1, 1);
 
-    final sessions = await (database.select(database.sessions)
+    final sessionsQuery = database.select(database.sessions)
           ..where((tbl) =>
               tbl.teamId.equals(teamId) &
               tbl.sessionDate.isBiggerOrEqualValue(startDate) &
-              tbl.sessionDate.isSmallerThanValue(endDate)))
-        .get();
+              tbl.sessionDate.isSmallerThanValue(endDate));
+
+    if (period != null && period.isNotEmpty && period != 'all') {
+      sessionsQuery.where((tbl) => tbl.period.equals(period));
+    }
+
+    final sessions = await sessionsQuery.get();
 
     final sessionUuids = sessions.map((s) => s.sessionUuid).toList();
 
@@ -259,6 +280,13 @@ class ReportsRepositoryImpl implements ReportsRepository {
       );
     }
 
+    final periodLabel = switch (period) {
+      'morning' => 'الفترة الصباحية',
+      'evening' => 'الفترة المسائية',
+      'extra' => 'فترة خاصة / إضافية',
+      _ => 'جميع الفترات التدريبية',
+    };
+
     return AdminSummaryReport(
       clubName: clubName,
       season: season,
@@ -268,6 +296,7 @@ class ReportsRepositoryImpl implements ReportsRepository {
       clubDirectorName: clubDirectorName,
       totalSessions: sessions.length,
       rows: rows,
+      periodLabel: periodLabel,
     );
   }
 

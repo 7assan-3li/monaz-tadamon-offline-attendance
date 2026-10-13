@@ -67,6 +67,33 @@ void main() {
       );
     },
   );
+  blocTest<AttendanceBloc, AttendanceState>(
+    'creates a new training session with custom period and title',
+    build: () => AttendanceBloc(
+      StartTodaySessionUseCase(repository),
+      MarkAllPresentUseCase(repository),
+      UpdatePlayerStatusUseCase(repository),
+      DispatchSessionUseCase(repository),
+      createSession: CreateSessionUseCase(repository),
+      getActiveDrafts: GetActiveDraftsUseCase(repository),
+      readSession: ReadSessionUseCase(repository),
+    ),
+    act: (bloc) => bloc.add(
+      const CreateNewSessionEvent(
+        teamId: 'team-first',
+        period: 'صباحي',
+        sessionTitle: 'تمرين صباحي - لياقة',
+      ),
+    ),
+    expect: () => [
+      isA<AttendanceLoading>(),
+      isA<AttendanceReady>().having(
+        (s) => s.session.period,
+        'period',
+        'صباحي',
+      ),
+    ],
+  );
 }
 
 class _Repository implements AttendanceRepository {
@@ -79,6 +106,7 @@ class _Repository implements AttendanceRepository {
       date: now,
       isLocked: false,
       isDispatched: false,
+      period: 'مسائي',
       items: [
         PlayerAttendanceItem(
           playerId: 'p1',
@@ -95,10 +123,36 @@ class _Repository implements AttendanceRepository {
   }
 
   @override
-  Future<AttendanceSession> startTodaySession(String teamId) async =>
+  Future<AttendanceSession> startTodaySession(
+    String teamId, {
+    String period = 'مسائي',
+    String? location,
+  }) async =>
       session = _initial();
+
+  @override
+  Future<AttendanceSession> createSession({
+    required String teamId,
+    String period = 'مسائي',
+    String? location,
+    String? sessionTitle,
+  }) async =>
+      session = _initial().copyWith(
+        period: period,
+        sessionTitle: sessionTitle,
+      );
+
+  @override
+  Future<List<AttendanceSession>> getActiveDrafts({String? teamId}) async =>
+      [session];
+
+  @override
+  Future<List<AttendanceSession>> getTodaySessions({String? teamId}) async =>
+      [session];
+
   @override
   Future<AttendanceSession?> readSession(String id) async => session;
+
   @override
   Future<AttendanceSession> markAllPresent(String id) async =>
       session = session.copyWith(
@@ -108,6 +162,7 @@ class _Repository implements AttendanceRepository {
             )
             .toList(),
       );
+
   @override
   Future<AttendanceSession> updateStatus(
     String id,
@@ -121,6 +176,7 @@ class _Repository implements AttendanceRepository {
         )
         .toList(),
   );
+
   @override
   Future<AttendanceSession> dispatch(String id) async =>
       session = session.copyWith(isLocked: true, isDispatched: true);

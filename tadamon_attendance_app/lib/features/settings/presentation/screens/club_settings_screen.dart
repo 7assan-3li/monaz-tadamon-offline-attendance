@@ -6,6 +6,7 @@ import 'package:tadamon_attendance_app/core/constants/app_colors.dart';
 import 'package:tadamon_attendance_app/core/di/service_locator.dart';
 import 'package:tadamon_attendance_app/features/backup/presentation/bloc/backup_bloc.dart';
 import 'package:tadamon_attendance_app/features/backup/presentation/screens/backup_screen.dart';
+import 'package:tadamon_attendance_app/features/reports/data/datasources/report_storage_service.dart';
 import 'package:tadamon_attendance_app/features/settings/domain/entities/club_profile_settings.dart';
 import 'package:tadamon_attendance_app/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:tadamon_attendance_app/features/settings/presentation/widgets/pin_pad_modal.dart';
@@ -216,6 +217,14 @@ class _SettingsContent extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         _buildDatabaseBackupCard(context),
+        const SizedBox(height: 16),
+        _buildSectionHeader(
+          icon: LucideIcons.fileSpreadsheet,
+          title: 'مسار وتفضيلات تصدير التقارير',
+          iconColor: const Color(0xFF6366F1),
+        ),
+        const SizedBox(height: 8),
+        _buildReportsExportSettingsCard(context),
         const SizedBox(height: 24),
         _buildFooter(),
         const SizedBox(height: 24),
@@ -724,6 +733,292 @@ class _SettingsContent extends StatelessWidget {
         border: Border.all(color: AppColors.borderSubtle),
       ),
       child: const TeamsScreen(),
+    );
+  }
+
+  Widget _buildReportsExportSettingsCard(BuildContext context) {
+    final currentPath = settings.reportsExportPath;
+    final isCustom = currentPath != null && currentPath.trim().isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(LucideIcons.folderDown, size: 18, color: Color(0xFF6366F1)),
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'مجلد حفظ تقارير الحضور (PDF / Excel)',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: (isCustom ? AppColors.royalBlue : AppColors.present).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  isCustom ? 'مسار مخصص' : 'تلقائي (Downloads)',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.bold,
+                    color: isCustom ? AppColors.royalBlue : AppColors.present,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Display path box
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.canvas,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.borderSubtle),
+            ),
+            child: Row(
+              children: [
+                const Icon(LucideIcons.hardDrive, size: 15, color: AppColors.textSecondary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isCustom
+                        ? currentPath
+                        : 'افتراضي: مجلد التنزيلات (Downloads/Tadamon_Reports)',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 11,
+                      fontWeight: isCustom ? FontWeight.bold : FontWeight.normal,
+                      color: isCustom ? AppColors.royalBlue : AppColors.textSecondary,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Fast Presets
+          const Text(
+            'اختيار سريع للمجلد بنقرة واحدة:',
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 10.5,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              ActionChip(
+                avatar: const Icon(LucideIcons.downloadCloud, size: 14, color: AppColors.royalBlue),
+                label: const Text('التنزيلات (Downloads)', style: TextStyle(fontFamily: 'Cairo', fontSize: 10.5)),
+                backgroundColor: AppColors.canvas,
+                side: const BorderSide(color: AppColors.borderSubtle),
+                onPressed: () async {
+                  final presets = await const ReportStorageService().getDirectoryPresets();
+                  final path = presets['downloads'];
+                  if (path != null && context.mounted) {
+                    context.read<SettingsBloc>().add(
+                          SettingsSaved(settings.copyWith(reportsExportPath: path)),
+                        );
+                  }
+                },
+              ),
+              ActionChip(
+                avatar: const Icon(LucideIcons.fileText, size: 14, color: Color(0xFF0F766E)),
+                label: const Text('المستندات (Documents)', style: TextStyle(fontFamily: 'Cairo', fontSize: 10.5)),
+                backgroundColor: AppColors.canvas,
+                side: const BorderSide(color: AppColors.borderSubtle),
+                onPressed: () async {
+                  final presets = await const ReportStorageService().getDirectoryPresets();
+                  final path = presets['documents'];
+                  if (path != null && context.mounted) {
+                    context.read<SettingsBloc>().add(
+                          SettingsSaved(settings.copyWith(reportsExportPath: path)),
+                        );
+                  }
+                },
+              ),
+              ActionChip(
+                avatar: const Icon(LucideIcons.smartphone, size: 14, color: Color(0xFF7C3AED)),
+                label: const Text('مجلد التطبيق (App Storage)', style: TextStyle(fontFamily: 'Cairo', fontSize: 10.5)),
+                backgroundColor: AppColors.canvas,
+                side: const BorderSide(color: AppColors.borderSubtle),
+                onPressed: () async {
+                  final presets = await const ReportStorageService().getDirectoryPresets();
+                  final path = presets['app_storage'];
+                  if (path != null && context.mounted) {
+                    context.read<SettingsBloc>().add(
+                          SettingsSaved(settings.copyWith(reportsExportPath: path)),
+                        );
+                  }
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Custom Path Dialog & Reset
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _showCustomPathDialog(context),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.borderSubtle),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(LucideIcons.penLine, size: 14, color: AppColors.textPrimary),
+                  label: const Text(
+                    'كتابة مسار مخصص...',
+                    style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: AppColors.textPrimary),
+                  ),
+                ),
+              ),
+              if (isCustom) ...[
+                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: 'استعادة المسار الافتراضي',
+                  icon: const Icon(LucideIcons.rotateCcw, size: 16, color: AppColors.textSecondary),
+                  onPressed: () {
+                    context.read<SettingsBloc>().add(
+                          SettingsSaved(
+                            ClubProfileSettings(
+                              clubName: settings.clubName,
+                              season: settings.season,
+                              adminName: settings.adminName,
+                              managerName: settings.managerName,
+                              hasPin: settings.hasPin,
+                              reportsExportPath: null,
+                              autoShareOnExport: settings.autoShareOnExport,
+                            ),
+                          ),
+                        );
+                  },
+                ),
+              ],
+            ],
+          ),
+
+          const Divider(height: 20, color: AppColors.borderSubtle),
+
+          // Auto-share switch
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            activeThumbColor: AppColors.royalBlue,
+            title: const Text(
+              'فتح نافذة المشاركة تلقائياً فور التصدير',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            subtitle: const Text(
+              'إظهار قائمة المشاركة النظامية (Bluetooth, Quick Share, Apps) فور إنشاء التقرير',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 10,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            value: settings.autoShareOnExport,
+            onChanged: (val) {
+              context.read<SettingsBloc>().add(
+                    SettingsSaved(settings.copyWith(autoShareOnExport: val)),
+                  );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCustomPathDialog(BuildContext context) {
+    final controller = TextEditingController(text: settings.reportsExportPath ?? '');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'تحديد مسار حفظ مخصص',
+          style: TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'أدخل المسار الكامل للمجلد الذي ترغب في حفظ التقارير داخله على جهازك:',
+              style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: controller,
+              style: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
+              decoration: InputDecoration(
+                hintText: 'مثال: C:\\Tadamon_Reports أو /storage/emulated/0/...',
+                hintStyle: const TextStyle(fontSize: 10),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('إلغاء', style: TextStyle(fontFamily: 'Cairo')),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.royalBlue),
+            onPressed: () {
+              final newPath = controller.text.trim();
+              if (newPath.isNotEmpty) {
+                context.read<SettingsBloc>().add(
+                      SettingsSaved(settings.copyWith(reportsExportPath: newPath)),
+                    );
+              }
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('حفظ المسار', style: TextStyle(fontFamily: 'Cairo', color: Colors.white)),
+          ),
+        ],
+      ),
     );
   }
 

@@ -34,10 +34,13 @@ class _FieldAttendanceFlowState extends State<FieldAttendanceFlow> {
       ),
       1 => QuickAttendanceScreen(
         onReview: () => setState(() => page = 2),
+        onBack: () => setState(() => page = 0),
         showBottomNav: widget.showBottomNav,
       ),
       _ => DispatchReviewScreen(
         onBack: () => setState(() => page = 1),
+        onReturnHome: () => setState(() => page = 0),
+        onStartAnotherSession: () => setState(() => page = 0),
       ),
     },
   );

@@ -8,6 +8,7 @@ class AttendanceSession {
     required this.items,
     required this.isLocked,
     required this.isDispatched,
+    this.period = 'مسائي',
     this.location = 'ملعب بارادم',
     this.sessionTitle = 'جلسة تدريبية رئيسية - عصر اليوم',
   });
@@ -17,6 +18,7 @@ class AttendanceSession {
   final List<PlayerAttendanceItem> items;
   final bool isLocked;
   final bool isDispatched;
+  final String period;
   final String location;
   final String sessionTitle;
 
@@ -39,6 +41,7 @@ class AttendanceSession {
     List<PlayerAttendanceItem>? items,
     bool? isLocked,
     bool? isDispatched,
+    String? period,
     String? location,
     String? sessionTitle,
   }) => AttendanceSession(
@@ -48,6 +51,7 @@ class AttendanceSession {
     items: items ?? this.items,
     isLocked: isLocked ?? this.isLocked,
     isDispatched: isDispatched ?? this.isDispatched,
+    period: period ?? this.period,
     location: location ?? this.location,
     sessionTitle: sessionTitle ?? this.sessionTitle,
   );

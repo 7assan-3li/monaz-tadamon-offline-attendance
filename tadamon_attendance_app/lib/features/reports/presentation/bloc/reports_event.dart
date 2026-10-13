@@ -9,11 +9,13 @@ final class LoadReportsHubEvent extends ReportsEvent {
     required this.teamId,
     required this.year,
     required this.month,
+    this.period,
   });
 
   final String teamId;
   final int year;
   final int month;
+  final String? period;
 }
 
 final class ApproveSessionEvent extends ReportsEvent {

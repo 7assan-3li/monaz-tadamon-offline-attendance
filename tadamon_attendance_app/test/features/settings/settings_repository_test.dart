@@ -6,7 +6,7 @@ import 'package:tadamon_attendance_app/features/settings/data/repositories/setti
 import 'package:tadamon_attendance_app/features/settings/domain/entities/club_profile_settings.dart';
 
 void main() {
-  test('persists club settings and verifies only the correct PIN', () async {
+  test('persists club settings, export preferences, and verifies only the correct PIN', () async {
     final database = AppDatabase.forTesting(NativeDatabase.memory());
     final repository = SettingsRepositoryImpl(database, PinSecurity());
     await repository.save(
@@ -15,12 +15,16 @@ void main() {
         season: '2026–2027',
         adminName: 'إداري الفريق',
         managerName: 'مدير النادي',
+        reportsExportPath: 'C:\\Tadamon_Reports',
+        autoShareOnExport: false,
       ),
     );
     await repository.setPin('1959');
     final settings = await repository.read();
     expect(settings.clubName, 'نادي تضامن حضرموت');
     expect(settings.hasPin, isTrue);
+    expect(settings.reportsExportPath, 'C:\\Tadamon_Reports');
+    expect(settings.autoShareOnExport, isFalse);
     expect(await repository.verifyPin('1959'), isTrue);
     expect(await repository.verifyPin('0000'), isFalse);
     await database.close();

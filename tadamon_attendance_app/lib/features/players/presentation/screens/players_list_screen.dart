@@ -310,6 +310,39 @@ class _PlayersListScreenState extends State<PlayersListScreen> {
                       ),
                     ),
                   ),
+                  InkWell(
+                    onTap: () => _showDisciplineInfoSheet(context),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.presentBackground,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(
+                            LucideIcons.badgeCheck,
+                            size: 14,
+                            color: AppColors.present,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'الانضباط: 92.4%',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.present,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 10),

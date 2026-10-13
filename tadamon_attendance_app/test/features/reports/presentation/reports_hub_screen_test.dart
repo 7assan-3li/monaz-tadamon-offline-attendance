@@ -62,6 +62,7 @@ class _FakeReportsRepo implements ReportsRepository {
     required String teamId,
     required int year,
     required int month,
+    String? period,
   }) async => dummySheet;
 
   @override
@@ -69,6 +70,7 @@ class _FakeReportsRepo implements ReportsRepository {
     required String teamId,
     required int year,
     required int month,
+    String? period,
   }) async => dummySummary;
 
   @override
@@ -126,6 +128,11 @@ void main() {
     expect(find.text('كشف الحضور الشهري'), findsOneWidget);
     expect(find.text('الخلاصة الإدارية'), findsOneWidget);
 
+    // 2. Test Quick Integration Navigation Link
+    await tester.tap(find.text('التحضير الميداني'));
+    await tester.pumpAndSettle();
+    expect(navigatedTab, 1);
+
     // 3. Test Notifications Sheet
     await tester.tap(find.byIcon(LucideIcons.bell));
     await tester.pumpAndSettle();
@@ -160,9 +167,14 @@ void main() {
     expect(find.text('خلاصة حضور وانضباط اللاعبين'), findsOneWidget);
     expect(find.text('المصادقة الإدارية الرسمية'), findsOneWidget);
 
-    // 8. Test Excel Export Action
-    final exportBtnFinder = find.text('تصدير الخلاصة (Excel)');
-    await tester.scrollUntilVisible(exportBtnFinder, 200);
+    // 8. Test Export Actions (PDF and Excel)
+    final exportBtnFinder = find.text('تصدير كشف الجداول (Excel XLSX)');
+    await tester.scrollUntilVisible(
+      exportBtnFinder,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('تصدير خلاصة الإداري (PDF الرسمية)'), findsOneWidget);
     await tester.tap(exportBtnFinder);
     await tester.pumpAndSettle();
   });
