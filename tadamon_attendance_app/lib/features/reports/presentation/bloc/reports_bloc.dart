@@ -35,12 +35,16 @@ class ReportsBloc extends Bloc<ReportsEvent, ReportsState> {
         year: event.year,
         month: event.month,
         period: event.period,
+        customStartDate: event.customStartDate,
+        customEndDate: event.customEndDate,
       );
       final summary = await _repository.getAdminSummaryReport(
         teamId: event.teamId,
         year: event.year,
         month: event.month,
         period: event.period,
+        customStartDate: event.customStartDate,
+        customEndDate: event.customEndDate,
       );
       final auditLogs = await _repository.getAuditLogs();
 

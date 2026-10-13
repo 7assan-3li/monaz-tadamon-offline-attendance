@@ -163,6 +163,8 @@ class _MockReportsRepository implements ReportsRepository {
     required int year,
     required int month,
     String? period,
+    DateTime? customStartDate,
+    DateTime? customEndDate,
   }) async => dummySheet;
 
   @override
@@ -171,6 +173,8 @@ class _MockReportsRepository implements ReportsRepository {
     required int year,
     required int month,
     String? period,
+    DateTime? customStartDate,
+    DateTime? customEndDate,
   }) async => dummySummary;
 
   @override

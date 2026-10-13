@@ -10,12 +10,16 @@ final class LoadReportsHubEvent extends ReportsEvent {
     required this.year,
     required this.month,
     this.period,
+    this.customStartDate,
+    this.customEndDate,
   });
 
   final String teamId;
   final int year;
   final int month;
   final String? period;
+  final DateTime? customStartDate;
+  final DateTime? customEndDate;
 }
 
 final class ApproveSessionEvent extends ReportsEvent {

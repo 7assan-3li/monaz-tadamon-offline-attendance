@@ -64,14 +64,18 @@ class ReportsRepositoryImpl implements ReportsRepository {
     required int year,
     required int month,
     String? period,
+    DateTime? customStartDate,
+    DateTime? customEndDate,
   }) async {
     final team = await (database.select(database.teams)
           ..where((tbl) => tbl.id.equals(teamId)))
         .getSingleOrNull();
     final teamName = team?.name ?? 'الفريق الأول';
 
-    final startDate = DateTime.utc(year, month, 1);
-    final endDate = DateTime.utc(year, month + 1, 1);
+    final startDate = customStartDate ?? DateTime.utc(year, month, 1);
+    final endDate = customEndDate != null
+        ? customEndDate.add(const Duration(days: 1))
+        : DateTime.utc(year, month + 1, 1);
 
     // Fetch sessions in month with optional period filter
     final sessionsQuery = database.select(database.sessions)
@@ -85,7 +89,7 @@ class ReportsRepositoryImpl implements ReportsRepository {
     }
 
     sessionsQuery.orderBy([
-      (tbl) => OrderingTerm(expression: tbl.sessionDate, mode: OrderingMode.asc),
+      (tbl) => OrderingTerm(expression: tbl.sessionDate, mode: OrderingMode.desc),
     ]);
 
     final sessions = await sessionsQuery.get();
@@ -107,6 +111,57 @@ class ReportsRepositoryImpl implements ReportsRepository {
       recordsQuery.where((tbl) => tbl.sessionUuid.isIn(sessionUuids));
     }
     final allRecords = sessionUuids.isEmpty ? <AttendanceRecord>[] : await recordsQuery.get();
+
+    final List<SessionReportItem> sessionItems = [];
+    for (final session in sessions) {
+      final recordsForThisSession =
+          allRecords.where((r) => r.sessionUuid == session.sessionUuid).toList();
+      int pCount = 0;
+      int eCount = 0;
+      int uCount = 0;
+      int lCount = 0;
+      final Map<String, AttendanceStatus> pStatuses = {};
+
+      for (final rec in recordsForThisSession) {
+        final st = AttendanceStatusVisuals.fromDb(rec.status);
+        pStatuses[rec.playerId] = st;
+        switch (st) {
+          case AttendanceStatus.present:
+            pCount++;
+          case AttendanceStatus.excused:
+            eCount++;
+          case AttendanceStatus.unexcused:
+            uCount++;
+        }
+        if (rec.lateMinutes > 0) lCount++;
+      }
+
+      final isApproved =
+          session.approvedAt != null || session.status == 'approved';
+
+      sessionItems.add(
+        SessionReportItem(
+          sessionUuid: session.sessionUuid,
+          date: session.sessionDate,
+          period: session.period,
+          location: session.location ?? 'منشأة الفقيد بارادم',
+          isApproved: isApproved,
+          isDispatched: session.isDispatched,
+          isLocked: session.isLocked,
+          presentCount: pCount,
+          excusedCount: eCount,
+          unexcusedCount: uCount,
+          lateCount: lCount,
+          totalPlayers: recordsForThisSession.isNotEmpty
+              ? recordsForThisSession.length
+              : players.length,
+          approvedBy: session.approvedBy,
+          approvedAt: session.approvedAt,
+          status: session.status,
+          playerStatuses: pStatuses,
+        ),
+      );
+    }
 
     final List<PlayerMonthlyRecord> playerRecords = [];
 
@@ -166,12 +221,12 @@ class ReportsRepositoryImpl implements ReportsRepository {
       );
     }
 
-      final periodLabel = switch (period) {
-        'morning' => 'الفترة الصباحية',
-        'evening' => 'الفترة المسائية',
-        'extra' => 'فترة خاصة / إضافية',
-        _ => 'جميع الفترات التدريبية',
-      };
+    final periodLabel = switch (period) {
+      'morning' => 'الفترة الصباحية',
+      'evening' => 'الفترة المسائية',
+      'extra' => 'فترة خاصة / إضافية',
+      _ => 'جميع الفترات التدريبية',
+    };
 
     return MonthlyAttendanceSheet(
       teamId: teamId,
@@ -181,6 +236,7 @@ class ReportsRepositoryImpl implements ReportsRepository {
       records: playerRecords,
       totalSessions: sessions.length,
       periodLabel: periodLabel,
+      sessions: sessionItems,
     );
   }
 
@@ -190,6 +246,8 @@ class ReportsRepositoryImpl implements ReportsRepository {
     required int year,
     required int month,
     String? period,
+    DateTime? customStartDate,
+    DateTime? customEndDate,
   }) async {
     final settings = await (database.select(database.clubSettings)..limit(1)).getSingleOrNull();
     final team = await (database.select(database.teams)..where((tbl) => tbl.id.equals(teamId))).getSingleOrNull();
@@ -200,8 +258,10 @@ class ReportsRepositoryImpl implements ReportsRepository {
     final teamManagerName = settings?.managerName ?? 'إداري الفريق المعتمد';
     final clubDirectorName = settings?.adminName ?? 'مدير النادي المعتمد';
 
-    final startDate = DateTime.utc(year, month, 1);
-    final endDate = DateTime.utc(year, month + 1, 1);
+    final startDate = customStartDate ?? DateTime.utc(year, month, 1);
+    final endDate = customEndDate != null
+        ? customEndDate.add(const Duration(days: 1))
+        : DateTime.utc(year, month + 1, 1);
 
     final sessionsQuery = database.select(database.sessions)
           ..where((tbl) =>

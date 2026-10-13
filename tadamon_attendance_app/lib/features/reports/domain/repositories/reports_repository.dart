@@ -24,6 +24,8 @@ abstract interface class ReportsRepository {
     required int year,
     required int month,
     String? period,
+    DateTime? customStartDate,
+    DateTime? customEndDate,
   });
 
   Future<AdminSummaryReport> getAdminSummaryReport({
@@ -31,6 +33,8 @@ abstract interface class ReportsRepository {
     required int year,
     required int month,
     String? period,
+    DateTime? customStartDate,
+    DateTime? customEndDate,
   });
 
   Future<List<int>> generateMonthlySheetPdf(MonthlyAttendanceSheet sheet);

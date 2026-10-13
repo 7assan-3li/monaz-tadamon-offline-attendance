@@ -9,6 +9,7 @@ import 'package:tadamon_attendance_app/features/reports/presentation/bloc/report
 import 'package:tadamon_attendance_app/features/reports/presentation/bloc/reports_event.dart';
 import 'package:tadamon_attendance_app/features/reports/presentation/bloc/reports_state.dart';
 import 'package:tadamon_attendance_app/features/reports/presentation/screens/audit_logs_screen.dart';
+import 'package:tadamon_attendance_app/features/reports/presentation/screens/master_review_approval_screen.dart';
 import 'package:tadamon_attendance_app/features/reports/presentation/widgets/export_success_bottom_sheet.dart';
 
 class ReportsHubScreen extends StatefulWidget {
@@ -24,11 +25,13 @@ class ReportsHubScreen extends StatefulWidget {
 }
 
 class _ReportsHubScreenState extends State<ReportsHubScreen> {
-  int _selectedTab = 0; // 0: حافظة التحضير (شهري), 1: خلاصة الإداري (تجميعي)
+  int _selectedTab = 0; // 0: سجل الحصص المحفوظة, 1: كشف الحضور الشهري, 2: خلاصة الإداري
   String _selectedTeamId = 'team-first';
   int _selectedYear = 2026;
   int _selectedMonth = 10;
   String _selectedPeriod = 'all'; // 'all', 'morning', 'evening', 'extra'
+  DateTime? _customStartDate;
+  DateTime? _customEndDate;
 
   static const List<Map<String, String>> _squads = [
     {
@@ -77,8 +80,99 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
             year: _selectedYear,
             month: _selectedMonth,
             period: _selectedPeriod == 'all' ? null : _selectedPeriod,
+            customStartDate: _customStartDate,
+            customEndDate: _customEndDate,
           ),
         );
+  }
+
+  String get _dateRangeFilterLabel {
+    if (_customStartDate != null && _customEndDate != null) {
+      final s = _customStartDate!;
+      final e = _customEndDate!;
+      return 'من ${s.day}/${s.month}/${s.year} إلى ${e.day}/${e.month}/${e.year}';
+    }
+    return 'كامل شهر $_currentMonthName';
+  }
+
+  String _formatArabicDate(DateTime date) {
+    const weekdays = [
+      'الاثنين',
+      'الثلاثاء',
+      'الأربعاء',
+      'الخميس',
+      'الجمعة',
+      'السبت',
+      'الأحد',
+    ];
+    const months = [
+      'يناير',
+      'فبراير',
+      'مارس',
+      'أبريل',
+      'مايو',
+      'يونيو',
+      'يوليو',
+      'أغسطس',
+      'سبتمبر',
+      'أكتوبر',
+      'نوفمبر',
+      'ديسمبر',
+    ];
+    final weekday = weekdays[(date.weekday - 1) % 7];
+    final month = months[(date.month - 1) % 12];
+    return '$weekday، ${date.day} $month ${date.year}';
+  }
+
+  Future<void> _selectDateRange(BuildContext context) async {
+    final initialRange = DateTimeRange(
+      start: _customStartDate ?? DateTime(_selectedYear, _selectedMonth, 1),
+      end: _customEndDate ??
+          DateTime(_selectedYear, _selectedMonth + 1, 0),
+    );
+
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2025, 1, 1),
+      lastDate: DateTime(2030, 12, 31),
+      initialDateRange: initialRange,
+      helpText: 'تحديد نطاق التواريخ لمراجعة الحصص',
+      cancelText: 'إلغاء',
+      confirmText: 'تطبيق الفلتر',
+      saveText: 'تطبيق',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+                  primary: AppColors.royalBlue,
+                  onPrimary: Colors.white,
+                  surface: AppColors.surface,
+                  onSurface: AppColors.textPrimary,
+                ),
+          ),
+          child: Directionality(
+            textDirection: TextDirection.rtl,
+            child: child!,
+          ),
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _customStartDate = picked.start;
+        _customEndDate = picked.end;
+      });
+      _loadReportsData();
+    }
+  }
+
+  void _clearDateRangeFilter() {
+    setState(() {
+      _customStartDate = null;
+      _customEndDate = null;
+    });
+    _loadReportsData();
   }
 
   @override
@@ -277,6 +371,9 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
 
         // 5. Tab Content: Focused and Simple
         if (_selectedTab == 0) ...[
+          // سجل الحصص المحفوظة (حصة بحصة، فلترة التواريخ، ومراجعة واعتماد الكشف)
+          _buildSavedSessionsTab(state),
+        ] else if (_selectedTab == 1) ...[
           // حافظة التحضير (شهري)
           _buildMonthlyStatsBanner(state),
           const SizedBox(height: 14),
@@ -605,99 +702,808 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
       child: Row(
         children: [
           Expanded(
-            child: InkWell(
-              onTap: () => setState(() => _selectedTab = 0),
-              borderRadius: BorderRadius.circular(9),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: _selectedTab == 0 ? AppColors.surface : Colors.transparent,
-                  borderRadius: BorderRadius.circular(9),
-                  boxShadow: _selectedTab == 0
-                      ? const [
-                          BoxShadow(
-                            color: Color(0x0C000000),
-                            blurRadius: 4,
-                            offset: Offset(0, 1),
-                          )
-                        ]
-                      : null,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      LucideIcons.calendarCheck,
-                      size: 16,
-                      color: _selectedTab == 0
-                          ? AppColors.royalBlue
-                          : AppColors.textSecondary,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'كشف الحضور الشهري',
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 12,
-                        fontWeight: _selectedTab == 0
-                            ? FontWeight.bold
-                            : FontWeight.w600,
-                        color: _selectedTab == 0
-                            ? AppColors.royalBlue
-                            : AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            child: _buildSegmentButton(
+              index: 0,
+              label: 'سجل الحصص',
+              icon: LucideIcons.clipboardList,
             ),
           ),
           Expanded(
-            child: InkWell(
-              onTap: () => setState(() => _selectedTab = 1),
-              borderRadius: BorderRadius.circular(9),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: _selectedTab == 1 ? AppColors.surface : Colors.transparent,
-                  borderRadius: BorderRadius.circular(9),
-                  boxShadow: _selectedTab == 1
-                      ? const [
-                          BoxShadow(
-                            color: Color(0x0C000000),
-                            blurRadius: 4,
-                            offset: Offset(0, 1),
-                          )
-                        ]
-                        : null,
+            child: _buildSegmentButton(
+              index: 1,
+              label: 'كشف الحضور الشهري',
+              icon: LucideIcons.calendarCheck,
+            ),
+          ),
+          Expanded(
+            child: _buildSegmentButton(
+              index: 2,
+              label: 'الخلاصة الإدارية',
+              icon: LucideIcons.fileText,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSegmentButton({
+    required int index,
+    required String label,
+    required IconData icon,
+  }) {
+    final isSelected = _selectedTab == index;
+    return InkWell(
+      onTap: () => setState(() => _selectedTab = index),
+      borderRadius: BorderRadius.circular(9),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.surface : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+          boxShadow: isSelected
+              ? const [
+                  BoxShadow(
+                    color: Color(0x0C000000),
+                    blurRadius: 4,
+                    offset: Offset(0, 1),
+                  )
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 15,
+              color: isSelected ? AppColors.royalBlue : AppColors.textSecondary,
+            ),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  color: isSelected ? AppColors.royalBlue : AppColors.textSecondary,
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- تبويب 0: سجل الحصص المحفوظة (استعراض الحصص وفلترة التاريخ والمراجعة التفصيلية) ---
+
+  Widget _buildSavedSessionsTab(ReportsLoaded state) {
+    final sessions = state.sheet.sessions;
+    final totalSessions = sessions.length;
+    final approvedCount = sessions.where((s) => s.isApproved).length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // 1. ملخص حصص الفترة
+        _buildSessionsSummaryBanner(state, totalSessions, approvedCount),
+        const SizedBox(height: 12),
+
+        // 2. بطاقة فلترة نطاق التاريخ
+        _buildDateRangeFilterCard(),
+        const SizedBox(height: 14),
+
+        // 3. عنوان القائمة مع العدد
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  LucideIcons.calendarRange,
+                  size: 18,
+                  color: AppColors.royalBlue,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'الحصص التدريبية المسجلة ($totalSessions)',
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            if (_customStartDate != null)
+              InkWell(
+                onTap: _clearDateRangeFilter,
+                child: const Row(
                   children: [
-                    Icon(
-                      LucideIcons.fileText,
-                      size: 16,
-                      color: _selectedTab == 1
-                          ? AppColors.royalBlue
-                          : AppColors.textSecondary,
-                    ),
-                    const SizedBox(width: 6),
+                    Icon(LucideIcons.rotateCcw, size: 14, color: AppColors.royalBlue),
+                    SizedBox(width: 4),
                     Text(
-                      'الخلاصة الإدارية',
+                      'إلغاء الفلتر',
                       style: TextStyle(
                         fontFamily: 'Cairo',
-                        fontSize: 12,
-                        fontWeight: _selectedTab == 1
-                            ? FontWeight.bold
-                            : FontWeight.w600,
-                        color: _selectedTab == 1
-                            ? AppColors.royalBlue
-                            : AppColors.textSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.royalBlue,
                       ),
                     ),
                   ],
                 ),
               ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // 4. بطاقات الحصص أو حالة الفراغ
+        if (sessions.isEmpty)
+          _buildEmptySessionsCard()
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: sessions.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              final session = sessions[index];
+              return _buildSessionCard(context, session, state.sheet.teamName);
+            },
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSessionsSummaryBanner(
+    ReportsLoaded state,
+    int totalSessions,
+    int approvedCount,
+  ) {
+    final sessions = state.sheet.sessions;
+    final totalPresent = sessions.fold<int>(0, (s, item) => s + item.presentCount);
+    final totalExcused = sessions.fold<int>(0, (s, item) => s + item.excusedCount);
+    final totalUnexcused = sessions.fold<int>(0, (s, item) => s + item.unexcusedCount);
+
+    final avgRate = sessions.isNotEmpty
+        ? (sessions.fold<double>(0.0, (s, item) => s + item.attendanceRate) / sessions.length)
+        : 0.0;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: AppColors.royalBlue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      LucideIcons.calendarCheck2,
+                      size: 18,
+                      color: AppColors.royalBlue,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'ملخص حصص الفترة المحددة',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        '$_currentSquadName • $_dateRangeFilterLabel',
+                        style: const TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 10,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: approvedCount == totalSessions && totalSessions > 0
+                      ? AppColors.presentBackground
+                      : const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  totalSessions == 0
+                      ? 'لا توجد حصص'
+                      : (approvedCount == totalSessions
+                          ? 'كافة الحصص معتمدة'
+                          : '$approvedCount / $totalSessions معتمد'),
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: approvedCount == totalSessions && totalSessions > 0
+                        ? AppColors.present
+                        : const Color(0xFFD97706),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.canvas,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppColors.royalBlue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          LucideIcons.dumbbell,
+                          size: 18,
+                          color: AppColors.royalBlue,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'إجمالي الحصص',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 9,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              Text(
+                                '$totalSessions',
+                                style: const TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Text(
+                                'حصة',
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 10,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.canvas,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppColors.presentBackground,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          LucideIcons.percent,
+                          size: 18,
+                          color: AppColors.present,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'متوسط الحضور',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 9,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          Text(
+                            '${avgRate.toStringAsFixed(0)}%',
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.present,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (totalSessions > 0) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                _LegendDot(color: AppColors.present, label: 'إجمالي الحضور: $totalPresent'),
+                const SizedBox(width: 10),
+                _LegendDot(color: AppColors.excused, label: 'معذور: $totalExcused'),
+                const SizedBox(width: 10),
+                _LegendDot(color: AppColors.unexcused, label: 'غياب: $totalUnexcused'),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateRangeFilterCard() {
+    final isCustom = _customStartDate != null && _customEndDate != null;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: isCustom
+            ? AppColors.royalBlue.withValues(alpha: 0.05)
+            : AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isCustom ? AppColors.royalBlue : AppColors.borderSubtle,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isCustom ? LucideIcons.calendarCheck2 : LucideIcons.calendarSearch,
+            size: 20,
+            color: AppColors.royalBlue,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isCustom ? 'نطاق التاريخ المخصص' : 'فترة العرض الحالية',
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 9.5,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                Text(
+                  _dateRangeFilterLabel,
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isCustom)
+            IconButton(
+              icon: const Icon(LucideIcons.x, size: 18, color: AppColors.unexcused),
+              tooltip: 'إلغاء الفلتر',
+              onPressed: _clearDateRangeFilter,
+            ),
+          ElevatedButton.icon(
+            onPressed: () => _selectDateRange(context),
+            icon: const Icon(LucideIcons.filter, size: 14),
+            label: Text(
+              isCustom ? 'تغيير النطاق' : 'تحديد من - إلى',
+              style: const TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.royalBlue,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptySessionsCard() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            LucideIcons.calendarOff,
+            size: 44,
+            color: AppColors.royalBlue.withValues(alpha: 0.4),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'لا توجد حصص تدريبية مسجلة في هذا النطاق',
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'يمكنك تغيير الشهر أو اختيار نطاق تواريخ آخر من الأعلى، أو بدء تحضير تمرين ميداني جديد.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 11,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 14),
+          if (_customStartDate != null)
+            ElevatedButton.icon(
+              onPressed: _clearDateRangeFilter,
+              icon: const Icon(LucideIcons.rotateCcw, size: 14),
+              label: const Text(
+                'العودة للشهر الحالي',
+                style: TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.royalBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSessionCard(
+    BuildContext context,
+    SessionReportItem session,
+    String teamName,
+  ) {
+    final arabicDate = _formatArabicDate(session.date);
+    final periodName = switch (session.period) {
+      'morning' => '☀️ تمرين صباحي',
+      'evening' => '🌙 تمرين مسائي',
+      'extra' => '⚡ فترة خاصة',
+      _ => 'حصة تدريبية',
+    };
+    final rate = session.attendanceRate.round();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: session.isApproved
+              ? AppColors.present.withValues(alpha: 0.3)
+              : AppColors.borderSubtle,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x07000000),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () async {
+            await Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => BlocProvider.value(
+                  value: context.read<ReportsBloc>(),
+                  child: MasterReviewApprovalScreen(
+                    sessionUuid: session.sessionUuid,
+                    sessionDate: session.date,
+                    teamName: teamName,
+                    isInitiallyApproved: session.isApproved,
+                  ),
+                ),
+              ),
+            );
+            if (mounted) {
+              _loadReportsData();
+            }
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top row: Date + Period badge + Approval badge
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.royalBlue.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        LucideIcons.calendarDays,
+                        size: 18,
+                        color: AppColors.royalBlue,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            arabicDate,
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              Text(
+                                periodName,
+                                style: const TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 10.5,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text('•', style: TextStyle(color: AppColors.textSecondary)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  session.location,
+                                  style: const TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 10.5,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: session.isApproved
+                            ? AppColors.presentBackground
+                            : AppColors.excusedBackground,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            session.isApproved
+                                ? LucideIcons.badgeCheck
+                                : LucideIcons.clock,
+                            size: 13,
+                            color: session.isApproved
+                                ? AppColors.present
+                                : AppColors.excused,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            session.isApproved ? 'معتمد' : 'مسودة',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: session.isApproved
+                                  ? AppColors.present
+                                  : AppColors.excused,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Attendance Status Pills Row
+                Row(
+                  children: [
+                    _buildStatPill(
+                      label: 'حاضر',
+                      count: session.presentCount,
+                      color: AppColors.present,
+                      bgColor: AppColors.presentBackground,
+                    ),
+                    const SizedBox(width: 6),
+                    _buildStatPill(
+                      label: 'معذور',
+                      count: session.excusedCount,
+                      color: AppColors.excused,
+                      bgColor: AppColors.excusedBackground,
+                    ),
+                    const SizedBox(width: 6),
+                    _buildStatPill(
+                      label: 'غياب',
+                      count: session.unexcusedCount,
+                      color: AppColors.unexcused,
+                      bgColor: AppColors.unexcusedBackground,
+                    ),
+                    if (session.lateCount > 0) ...[
+                      const SizedBox(width: 6),
+                      _buildStatPill(
+                        label: 'تأخير',
+                        count: session.lateCount,
+                        color: const Color(0xFFD97706),
+                        bgColor: const Color(0xFFFEF3C7),
+                      ),
+                    ],
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: (rate >= 80 ? AppColors.present : AppColors.excused).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'حضور $rate%',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: rate >= 80 ? AppColors.present : AppColors.excused,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                const Divider(height: 1, color: AppColors.borderSubtle),
+                const SizedBox(height: 8),
+
+                // Bottom row: Review & Drill-down button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'إجمالي اللاعبين بالكشف: ${session.totalPlayers}',
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 10.5,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          session.isApproved ? 'عرض الكشف' : 'مراجعة واعتماد الكشف',
+                          style: const TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.royalBlue,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          LucideIcons.chevronLeft,
+                          size: 15,
+                          color: AppColors.royalBlue,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatPill({
+    required String label,
+    required int count,
+    required Color color,
+    required Color bgColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 9.5,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '$count',
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
           ),
         ],
