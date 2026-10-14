@@ -20,6 +20,7 @@ import 'package:tadamon_attendance_app/core/security/pin_security.dart';
 import 'package:tadamon_attendance_app/features/settings/data/repositories/settings_repository_impl.dart';
 import 'package:tadamon_attendance_app/features/settings/domain/repositories/settings_repository.dart';
 import 'package:tadamon_attendance_app/features/settings/presentation/bloc/settings_bloc.dart';
+import 'package:tadamon_attendance_app/features/teams/presentation/bloc/active_team_cubit.dart';
 import 'package:tadamon_attendance_app/features/teams/data/repositories/teams_repository_impl.dart';
 import 'package:tadamon_attendance_app/features/teams/domain/repositories/teams_repository.dart';
 import 'package:tadamon_attendance_app/features/teams/presentation/bloc/teams_bloc.dart';
@@ -53,6 +54,12 @@ import 'package:tadamon_attendance_app/features/backup/presentation/bloc/backup_
 final GetIt serviceLocator = GetIt.instance;
 
 void configureCoreDependencies({AppDatabase? database}) {
+  if (!serviceLocator.isRegistered<ActiveTeamCubit>()) {
+    serviceLocator.registerLazySingleton<ActiveTeamCubit>(
+      () => ActiveTeamCubit(),
+    );
+  }
+
   if (serviceLocator.isRegistered<AppDatabase>()) {
     return;
   }

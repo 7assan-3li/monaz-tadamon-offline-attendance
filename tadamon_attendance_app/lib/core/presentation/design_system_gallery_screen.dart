@@ -12,6 +12,8 @@ import 'package:tadamon_attendance_app/features/attendance/presentation/screens/
 import 'package:tadamon_attendance_app/features/sync/presentation/bloc/sync_bloc.dart';
 import 'package:tadamon_attendance_app/features/sync/presentation/screens/master_scan_qr_screen.dart';
 
+import 'package:tadamon_attendance_app/features/teams/presentation/bloc/active_team_cubit.dart';
+
 class DesignSystemGalleryScreen extends StatefulWidget {
   const DesignSystemGalleryScreen({this.onNavigateTab, super.key});
 
@@ -33,19 +35,38 @@ class _DesignSystemGalleryScreenState extends State<DesignSystemGalleryScreen> {
   final int _absentCount = 0;
   int _pendingCount = 0;
 
+  ActiveTeamCubit? _tryGetActiveTeamCubit(BuildContext context) {
+    try {
+      return context.read<ActiveTeamCubit>();
+    } catch (_) {
+      if (serviceLocator.isRegistered<ActiveTeamCubit>()) {
+        return serviceLocator<ActiveTeamCubit>();
+      }
+      return null;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    _refreshSquadPlayerCount();
+    final activeCubit = _tryGetActiveTeamCubit(context);
+    if (activeCubit != null) {
+      _selectedSquad = activeCubit.state.teamName;
+      _refreshSquadPlayerCount(activeCubit.state.teamId);
+    } else {
+      _refreshSquadPlayerCount();
+    }
   }
 
-  Future<void> _refreshSquadPlayerCount() async {
+  Future<void> _refreshSquadPlayerCount([String? targetTeamId]) async {
     try {
       final db = serviceLocator<AppDatabase>();
-      final teamId = switch (_selectedSquad) {
+      final teamId = targetTeamId ?? switch (_selectedSquad) {
         'الفريق الأول' => 'team-first',
         'فريق الشباب' => 'team-youth',
+        'فريق الشباب (تحت 19)' => 'team-youth',
         'فريق الناشئين' => 'team-junior',
+        'فريق الناشئين (تحت 17)' => 'team-junior',
         _ => 'team-first',
       };
       final players = await (db.select(db.players)
@@ -62,7 +83,7 @@ class _DesignSystemGalleryScreenState extends State<DesignSystemGalleryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    Widget content = Scaffold(
       backgroundColor: AppColors.canvas,
       appBar: _buildAppBar(context),
       body: ListView(
@@ -85,6 +106,23 @@ class _DesignSystemGalleryScreenState extends State<DesignSystemGalleryScreen> {
         ],
       ),
     );
+
+    final activeCubit = _tryGetActiveTeamCubit(context);
+    if (activeCubit != null) {
+      content = BlocListener<ActiveTeamCubit, ActiveTeamState>(
+        bloc: activeCubit,
+        listener: (context, state) {
+          if (_selectedSquad != state.teamName) {
+            setState(() {
+              _selectedSquad = state.teamName;
+            });
+            _refreshSquadPlayerCount(state.teamId);
+          }
+        },
+        child: content,
+      );
+    }
+    return content;
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
@@ -190,54 +228,46 @@ class _DesignSystemGalleryScreenState extends State<DesignSystemGalleryScreen> {
   }
 
   Widget _buildSquadBar() {
-    return InkWell(
-      onTap: () => _showSquadSelectorSheet(context),
-      borderRadius: BorderRadius.circular(12),
-      child: AppCard(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Row(
+    final activeCubit = _tryGetActiveTeamCubit(context);
+    final currentTeamId = activeCubit?.state.teamId ?? switch (_selectedSquad) {
+      'الفريق الأول' => 'team-first',
+      'فريق الشباب' => 'team-youth',
+      'فريق الشباب (تحت 19)' => 'team-youth',
+      'فريق الناشئين' => 'team-junior',
+      'فريق الناشئين (تحت 17)' => 'team-junior',
+      _ => 'team-first',
+    };
+
+    return AppCard(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(LucideIcons.shieldCheck, size: 16, color: AppColors.royalBlue),
+                  SizedBox(width: 6),
+                  Text(
+                    'الفئة الرياضية النشطة',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
                 children: [
                   Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: AppColors.present,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      _selectedSquad,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(
-                    LucideIcons.chevronDown,
-                    size: 14,
-                    color: AppColors.textSecondary,
-                  ),
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 1.5,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
                       color: AppColors.sessionBackground,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       '$_totalPlayers لاعباً',
@@ -249,27 +279,113 @@ class _DesignSystemGalleryScreenState extends State<DesignSystemGalleryScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 6),
+                  InkWell(
+                    onTap: () => _showSquadSelectorSheet(context),
+                    borderRadius: BorderRadius.circular(6),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      child: Row(
+                        children: [
+                          Text(
+                            'المزيد',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.royalBlue,
+                            ),
+                          ),
+                          Icon(LucideIcons.chevronDown, size: 12, color: AppColors.royalBlue),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: AppColors.presentBackground,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Text(
-                'باقة الموسم المعتمدة',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.present,
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _buildSquadTabButton(
+                  id: 'team-first',
+                  title: 'الفريق الأول',
+                  isSelected: currentTeamId == 'team-first',
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildSquadTabButton(
+                  id: 'team-youth',
+                  title: 'فريق الشباب',
+                  isSelected: currentTeamId == 'team-youth',
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildSquadTabButton(
+                  id: 'team-junior',
+                  title: 'فريق الناشئين',
+                  isSelected: currentTeamId == 'team-junior',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSquadTabButton({
+    required String id,
+    required String title,
+    required bool isSelected,
+  }) {
+    return InkWell(
+      onTap: () {
+        final cubit = _tryGetActiveTeamCubit(context);
+        if (cubit != null) {
+          cubit.selectById(id);
+        }
+        setState(() {
+          _selectedSquad = title;
+        });
+        _refreshSquadPlayerCount(id);
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.royalBlue : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? AppColors.royalBlue : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.5 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.royalBlue.withValues(alpha: 0.25),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          title,
+          style: TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: 11.5,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            color: isSelected ? Colors.white : AppColors.textPrimary,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
     );
@@ -310,20 +426,20 @@ class _DesignSystemGalleryScreenState extends State<DesignSystemGalleryScreen> {
             const Divider(height: 20),
             _buildSquadOption(
               ctx,
+              id: 'team-first',
               title: 'الفريق الأول',
-              count: 27,
               subtitle: 'الفئة الأساسية المعتمدة للموسم',
             ),
             _buildSquadOption(
               ctx,
-              title: 'فريق الشباب (تحت 19)',
-              count: 24,
+              id: 'team-youth',
+              title: 'فريق الشباب',
               subtitle: 'فئة الشباب لدوري المحافظة',
             ),
             _buildSquadOption(
               ctx,
-              title: 'فريق الناشئين (تحت 17)',
-              count: 22,
+              id: 'team-junior',
+              title: 'فريق الناشئين',
               subtitle: 'الفئة العمرية الصغرى',
             ),
           ],
@@ -334,17 +450,30 @@ class _DesignSystemGalleryScreenState extends State<DesignSystemGalleryScreen> {
 
   Widget _buildSquadOption(
     BuildContext ctx, {
+    required String id,
     required String title,
-    required int count,
     required String subtitle,
   }) {
-    final isSelected = _selectedSquad == title;
+    final activeCubit = _tryGetActiveTeamCubit(context);
+    final currentTeamId = activeCubit?.state.teamId ?? switch (_selectedSquad) {
+      'الفريق الأول' => 'team-first',
+      'فريق الشباب' => 'team-youth',
+      'فريق الشباب (تحت 19)' => 'team-youth',
+      'فريق الناشئين' => 'team-junior',
+      'فريق الناشئين (تحت 17)' => 'team-junior',
+      _ => 'team-first',
+    };
+    final isSelected = currentTeamId == id;
     return InkWell(
       onTap: () {
+        final cubit = _tryGetActiveTeamCubit(context);
+        if (cubit != null) {
+          cubit.selectById(id);
+        }
         setState(() {
           _selectedSquad = title;
         });
-        _refreshSquadPlayerCount();
+        _refreshSquadPlayerCount(id);
         Navigator.of(ctx).pop();
       },
       borderRadius: BorderRadius.circular(10),
@@ -403,7 +532,7 @@ class _DesignSystemGalleryScreenState extends State<DesignSystemGalleryScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                isSelected ? '$_totalPlayers لاعباً' : 'الفئة المعتمدة',
+                isSelected ? 'الفئة النشطة' : 'اختيار',
                 style: TextStyle(
                   fontFamily: 'Cairo',
                   fontSize: 10,
@@ -670,6 +799,14 @@ class _DesignSystemGalleryScreenState extends State<DesignSystemGalleryScreen> {
                     leadingIcon: LucideIcons.play,
                     height: 52,
                     onPressed: () {
+                      final currentTeamId = _tryGetActiveTeamCubit(context)?.state.teamId ?? switch (_selectedSquad) {
+                        'الفريق الأول' => 'team-first',
+                        'فريق الشباب' => 'team-youth',
+                        'فريق الشباب (تحت 19)' => 'team-youth',
+                        'فريق الناشئين' => 'team-junior',
+                        'فريق الناشئين (تحت 17)' => 'team-junior',
+                        _ => 'team-first',
+                      };
                       if (widget.onNavigateTab != null) {
                         widget.onNavigateTab!(1);
                       } else {
@@ -678,7 +815,7 @@ class _DesignSystemGalleryScreenState extends State<DesignSystemGalleryScreen> {
                             builder: (_) => BlocProvider(
                               create: (_) => serviceLocator<AttendanceBloc>()
                                 ..add(
-                                  const StartTodaySessionEvent('team-first'),
+                                  StartTodaySessionEvent(currentTeamId),
                                 ),
                               child: const FieldAttendanceFlow(initialPage: 1),
                             ),

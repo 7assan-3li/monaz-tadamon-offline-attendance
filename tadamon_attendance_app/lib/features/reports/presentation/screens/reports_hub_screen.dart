@@ -11,6 +11,8 @@ import 'package:tadamon_attendance_app/features/reports/presentation/bloc/report
 import 'package:tadamon_attendance_app/features/reports/presentation/screens/audit_logs_screen.dart';
 import 'package:tadamon_attendance_app/features/reports/presentation/screens/master_review_approval_screen.dart';
 import 'package:tadamon_attendance_app/features/reports/presentation/widgets/export_success_bottom_sheet.dart';
+import 'package:tadamon_attendance_app/core/di/service_locator.dart';
+import 'package:tadamon_attendance_app/features/teams/presentation/bloc/active_team_cubit.dart';
 
 class ReportsHubScreen extends StatefulWidget {
   const ReportsHubScreen({
@@ -29,9 +31,20 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
   String _selectedTeamId = 'team-first';
   int _selectedYear = 2026;
   int _selectedMonth = 10;
-  String _selectedPeriod = 'all'; // 'all', 'morning', 'evening', 'extra'
+  final String _selectedPeriod = 'all'; // 'all', 'morning', 'evening', 'extra'
   DateTime? _customStartDate;
   DateTime? _customEndDate;
+
+  ActiveTeamCubit? _tryGetActiveTeamCubit(BuildContext context) {
+    try {
+      return context.read<ActiveTeamCubit>();
+    } catch (_) {
+      if (serviceLocator.isRegistered<ActiveTeamCubit>()) {
+        return serviceLocator<ActiveTeamCubit>();
+      }
+      return null;
+    }
+  }
 
   static const List<Map<String, String>> _squads = [
     {
@@ -70,6 +83,10 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
   @override
   void initState() {
     super.initState();
+    final activeCubit = _tryGetActiveTeamCubit(context);
+    if (activeCubit != null) {
+      _selectedTeamId = activeCubit.state.teamId;
+    }
     _loadReportsData();
   }
 
@@ -84,15 +101,6 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
             customEndDate: _customEndDate,
           ),
         );
-  }
-
-  String get _dateRangeFilterLabel {
-    if (_customStartDate != null && _customEndDate != null) {
-      final s = _customStartDate!;
-      final e = _customEndDate!;
-      return 'من ${s.day}/${s.month}/${s.year} إلى ${e.day}/${e.month}/${e.year}';
-    }
-    return 'كامل شهر $_currentMonthName';
   }
 
   String _formatArabicDate(DateTime date) {
@@ -124,60 +132,9 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
     return '$weekday، ${date.day} $month ${date.year}';
   }
 
-  Future<void> _selectDateRange(BuildContext context) async {
-    final initialRange = DateTimeRange(
-      start: _customStartDate ?? DateTime(_selectedYear, _selectedMonth, 1),
-      end: _customEndDate ??
-          DateTime(_selectedYear, _selectedMonth + 1, 0),
-    );
-
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2025, 1, 1),
-      lastDate: DateTime(2030, 12, 31),
-      initialDateRange: initialRange,
-      helpText: 'تحديد نطاق التواريخ لمراجعة الحصص',
-      cancelText: 'إلغاء',
-      confirmText: 'تطبيق الفلتر',
-      saveText: 'تطبيق',
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: AppColors.royalBlue,
-                  onPrimary: Colors.white,
-                  surface: AppColors.surface,
-                  onSurface: AppColors.textPrimary,
-                ),
-          ),
-          child: Directionality(
-            textDirection: TextDirection.rtl,
-            child: child!,
-          ),
-        );
-      },
-    );
-
-    if (picked != null) {
-      setState(() {
-        _customStartDate = picked.start;
-        _customEndDate = picked.end;
-      });
-      _loadReportsData();
-    }
-  }
-
-  void _clearDateRangeFilter() {
-    setState(() {
-      _customStartDate = null;
-      _customEndDate = null;
-    });
-    _loadReportsData();
-  }
-
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<ReportsBloc, ReportsState>(
+    Widget content = BlocConsumer<ReportsBloc, ReportsState>(
       listener: (context, state) {
         if (state is ReportsLoaded) {
           if (state.exportedFilePath != null) {
@@ -225,6 +182,21 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
         );
       },
     );
+
+    final activeCubit = _tryGetActiveTeamCubit(context);
+    if (activeCubit != null) {
+      content = BlocListener<ActiveTeamCubit, ActiveTeamState>(
+        bloc: activeCubit,
+        listener: (context, state) {
+          if (_selectedTeamId != state.teamId) {
+            setState(() => _selectedTeamId = state.teamId);
+            _loadReportsData();
+          }
+        },
+        child: content,
+      );
+    }
+    return content;
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context, ReportsState state) {
@@ -375,8 +347,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
         ] else ...[
           // خلاصة الإداري (تجميعي)
           _buildOfficialSummaryCard(state.summary),
-          const SizedBox(height: 14),
-          _buildAccreditationCard(),
+
           const SizedBox(height: 14),
           _buildSummaryExportCard(context),
         ],
@@ -560,82 +531,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
     );
   }
 
-  Widget _buildPeriodFilterChips() {
-    final periods = [
-      {'key': 'all', 'label': 'جميع الفترات', 'icon': LucideIcons.layers},
-      {'key': 'morning', 'label': 'تمرين صباحي', 'icon': LucideIcons.sunMedium},
-      {'key': 'evening', 'label': 'تمرين مسائي', 'icon': LucideIcons.moon},
-      {'key': 'extra', 'label': 'فترة خاصة', 'icon': LucideIcons.zap},
-    ];
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        children: periods.map((p) {
-          final isSelected = _selectedPeriod == p['key'];
-          return Padding(
-            padding: const EdgeInsetsDirectional.only(end: 8),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  if (_selectedPeriod != p['key']) {
-                    setState(() {
-                      _selectedPeriod = p['key'] as String;
-                    });
-                    _loadReportsData();
-                  }
-                },
-                borderRadius: BorderRadius.circular(10),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isSelected ? AppColors.royalBlue : Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isSelected ? AppColors.royalBlue : const Color(0xFFE2E8F0),
-                      width: isSelected ? 1.5 : 1.0,
-                    ),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: AppColors.royalBlue.withValues(alpha: 0.25),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            )
-                          ]
-                        : null,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        p['icon'] as IconData,
-                        size: 15,
-                        color: isSelected ? Colors.white : AppColors.royalBlue,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        p['label'] as String,
-                        style: TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 11.5,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                          color: isSelected ? Colors.white : AppColors.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
 
   Widget _buildSegmentedControl() {
     return Container(
@@ -773,7 +669,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: sessions.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               final session = sessions[index];
               return _buildSessionCard(context, session, state.sheet.teamName);
@@ -816,46 +712,53 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.royalBlue.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      LucideIcons.calendarCheck2,
-                      size: 19,
-                      color: AppColors.royalBlue,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'ملخص حصص الفترة المحددة',
-                        style: TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.royalBlue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      Text(
-                        '$_currentSquadName • $_currentMonthName',
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 10,
-                          color: AppColors.textSecondary,
-                        ),
+                      child: const Icon(
+                        LucideIcons.calendarCheck2,
+                        size: 19,
+                        color: AppColors.royalBlue,
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'ملخص حصص الفترة المحددة',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            '$_currentSquadName • $_currentMonthName',
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 10,
+                              color: AppColors.textSecondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
@@ -1337,46 +1240,53 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: AppColors.sessionBackground,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      LucideIcons.activity,
-                      size: 18,
-                      color: AppColors.session,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'ملخص الحضور الشهري',
-                        style: TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: AppColors.sessionBackground,
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      Text(
-                        '$_currentSquadName • $_currentMonthName',
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 10,
-                          color: AppColors.textSecondary,
-                        ),
+                      child: const Icon(
+                        LucideIcons.activity,
+                        size: 18,
+                        color: AppColors.session,
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'ملخص الحضور الشهري',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            '$_currentSquadName • $_currentMonthName',
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 10,
+                              color: AppColors.textSecondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -2266,191 +2176,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
     );
   }
 
-  Widget _buildAccreditationCard() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSubtle),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    LucideIcons.fileSignature,
-                    size: 16,
-                    color: AppColors.royalBlue,
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    'المصادقة الإدارية الرسمية',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                'توثيق معتمد',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 10,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.canvas,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.borderSubtle),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'إداري الفريق المكلف',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 9,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          Text(
-                            'إداري الفريق المعتمد',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          Text(
-                            'المصادقة الميدانية الرسمية',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 8,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.presentBackground,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(
-                              LucideIcons.check,
-                              size: 12,
-                              color: AppColors.present,
-                            ),
-                            SizedBox(width: 3),
-                            Text(
-                              'معتمد',
-                              style: TextStyle(
-                                fontFamily: 'Cairo',
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.present,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.canvas,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.borderSubtle),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'مدير عام النادي',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 9,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          Text(
-                            'المصادقة الإدارية',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          Text(
-                            'المصادقة الرسمية للنادي',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 8,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.presentBackground,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text(
-                          'معتمد رسمياً',
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 8.5,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.present,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+
 
   /// PDF Export Card for Tab 0
   Widget _buildPdfExportCard(BuildContext context) {
@@ -2936,6 +2662,8 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                     onTap: () {
                       Navigator.of(ctx).pop();
                       setState(() => _selectedTeamId = squad['id']!);
+                      final cubit = _tryGetActiveTeamCubit(context);
+                      cubit?.selectById(squad['id']!);
                       _loadReportsData();
                     },
                     borderRadius: BorderRadius.circular(10),

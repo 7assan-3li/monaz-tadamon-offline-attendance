@@ -9,6 +9,8 @@ import 'package:tadamon_attendance_app/features/attendance/presentation/bloc/att
 import 'package:tadamon_attendance_app/features/attendance/presentation/widgets/attendance_player_card.dart';
 import 'package:tadamon_attendance_app/features/attendance/presentation/widgets/locked_session_banner.dart';
 import 'package:tadamon_attendance_app/features/attendance/presentation/widgets/one_touch_present_button.dart';
+import 'package:tadamon_attendance_app/core/di/service_locator.dart';
+import 'package:tadamon_attendance_app/features/teams/presentation/bloc/active_team_cubit.dart';
 
 class QuickAttendanceScreen extends StatefulWidget {
   const QuickAttendanceScreen({
@@ -30,6 +32,17 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _selectedFilter = 'all'; // 'all', 'present', 'absent', 'excused'
+
+  ActiveTeamCubit? _tryGetActiveTeamCubit(BuildContext context) {
+    try {
+      return context.read<ActiveTeamCubit>();
+    } catch (_) {
+      if (serviceLocator.isRegistered<ActiveTeamCubit>()) {
+        return serviceLocator<ActiveTeamCubit>();
+      }
+      return null;
+    }
+  }
 
   @override
   void dispose() {
@@ -66,7 +79,7 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
         final session = state.session;
         final filteredItems = _filterPlayers(session.items);
 
-        return Scaffold(
+        final scaffold = Scaffold(
           backgroundColor: AppColors.canvas,
           appBar: _buildAppBar(context),
           body: Column(
@@ -141,6 +154,22 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
               ? _buildBottomNavigationBar(context)
               : null,
         );
+
+        final activeCubit = _tryGetActiveTeamCubit(context);
+        if (activeCubit != null) {
+          return BlocListener<ActiveTeamCubit, ActiveTeamState>(
+            bloc: activeCubit,
+            listener: (context, activeState) {
+              if (session.teamId != activeState.teamId && !session.isLocked) {
+                context.read<AttendanceBloc>().add(
+                      StartTodaySessionEvent(activeState.teamId),
+                    );
+              }
+            },
+            child: scaffold,
+          );
+        }
+        return scaffold;
       },
     );
   }
@@ -841,6 +870,8 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
       onTap: () {
         Navigator.of(ctx).pop();
         if (id != currentTeamId) {
+          final cubit = _tryGetActiveTeamCubit(context);
+          cubit?.selectById(id);
           context.read<AttendanceBloc>().add(StartTodaySessionEvent(id));
         }
       },

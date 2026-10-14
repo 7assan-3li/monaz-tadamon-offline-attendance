@@ -22,6 +22,7 @@ import 'package:tadamon_attendance_app/features/settings/presentation/screens/cl
 import 'package:tadamon_attendance_app/features/teams/presentation/bloc/teams_bloc.dart';
 import 'package:tadamon_attendance_app/features/attendance/presentation/bloc/attendance_bloc.dart';
 import 'package:tadamon_attendance_app/features/attendance/presentation/screens/field_attendance_flow.dart';
+import 'package:tadamon_attendance_app/features/teams/presentation/bloc/active_team_cubit.dart';
 import 'package:tadamon_attendance_app/features/reports/presentation/bloc/reports_bloc.dart';
 import 'package:tadamon_attendance_app/features/reports/presentation/screens/reports_hub_screen.dart';
 
@@ -67,14 +68,21 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'تحضير نادي تضامن حضرموت',
-      theme: AppTheme.light,
-      builder: (context, child) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: child ?? const SizedBox.shrink(),
+    final activeTeamCubit = serviceLocator.isRegistered<ActiveTeamCubit>()
+        ? serviceLocator<ActiveTeamCubit>()
+        : ActiveTeamCubit();
+
+    return BlocProvider<ActiveTeamCubit>.value(
+      value: activeTeamCubit,
+      child: MaterialApp(
+        title: 'تحضير نادي تضامن حضرموت',
+        theme: AppTheme.light,
+        builder: (context, child) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: child ?? const SizedBox.shrink(),
+        ),
+        home: home,
       ),
-      home: home,
     );
   }
 }
@@ -127,6 +135,8 @@ class _AppBootstrapState extends State<AppBootstrap> {
       );
     }
 
+    final activeTeam = context.watch<ActiveTeamCubit>().state;
+
     return switch (license.role) {
       ActivatedDeviceRole.masterAdmin =>
         !_masterReady
@@ -140,7 +150,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
                     providers: [
                       BlocProvider(
                         create: (_) => serviceLocator<AttendanceBloc>()
-                          ..add(const StartTodaySessionEvent('team-first')),
+                          ..add(StartTodaySessionEvent(activeTeam.teamId)),
                       ),
                     ],
                     child: const FieldAttendanceFlow(

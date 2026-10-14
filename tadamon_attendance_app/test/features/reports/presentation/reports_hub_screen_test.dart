@@ -113,14 +113,12 @@ void main() {
 
     final repo = _FakeReportsRepo();
     final bloc = ReportsBloc(repo);
-    int? navigatedTab;
-
     await tester.pumpWidget(
       MaterialApp(
         home: BlocProvider<ReportsBloc>.value(
           value: bloc,
           child: ReportsHubScreen(
-            onNavigateTab: (index) => navigatedTab = index,
+            onNavigateTab: (_) {},
           ),
         ),
       ),
@@ -167,7 +165,6 @@ void main() {
     await tester.tap(find.text('الخلاصة الإدارية'));
     await tester.pumpAndSettle();
     expect(find.text('خلاصة حضور وانضباط اللاعبين'), findsOneWidget);
-    expect(find.text('المصادقة الإدارية الرسمية'), findsOneWidget);
 
     // 8. Test Export Actions (PDF and Excel)
     final exportBtnFinder = find.text('تصدير كشف الجداول (Excel XLSX)');

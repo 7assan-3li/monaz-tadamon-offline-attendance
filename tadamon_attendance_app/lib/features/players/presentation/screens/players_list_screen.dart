@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:tadamon_attendance_app/core/constants/app_colors.dart';
 import 'package:tadamon_attendance_app/core/widgets/confirmation_dialog.dart';
+import 'package:tadamon_attendance_app/core/di/service_locator.dart';
+import 'package:tadamon_attendance_app/features/teams/presentation/bloc/active_team_cubit.dart';
 import 'package:tadamon_attendance_app/features/players/domain/entities/club_player.dart';
 import 'package:tadamon_attendance_app/features/players/presentation/bloc/players_bloc.dart';
 import 'package:tadamon_attendance_app/features/players/presentation/bloc/players_event.dart';
@@ -22,6 +24,26 @@ class _PlayersListScreenState extends State<PlayersListScreen> {
   String _selectedTeamFilter = 'team-first'; // team-first, team-youth, team-junior, all
   String _selectedPositionFilter = 'all'; // all, gk, def, mid, fwd
 
+  ActiveTeamCubit? _tryGetActiveTeamCubit(BuildContext context) {
+    try {
+      return context.read<ActiveTeamCubit>();
+    } catch (_) {
+      if (serviceLocator.isRegistered<ActiveTeamCubit>()) {
+        return serviceLocator<ActiveTeamCubit>();
+      }
+      return null;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final activeCubit = _tryGetActiveTeamCubit(context);
+    if (activeCubit != null) {
+      _selectedTeamFilter = activeCubit.state.teamId;
+    }
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -30,7 +52,7 @@ class _PlayersListScreenState extends State<PlayersListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    Widget content = Scaffold(
       backgroundColor: AppColors.canvas,
       appBar: _buildAppBar(context),
       floatingActionButton: FloatingActionButton.extended(
@@ -66,6 +88,20 @@ class _PlayersListScreenState extends State<PlayersListScreen> {
         },
       ),
     );
+
+    final activeCubit = _tryGetActiveTeamCubit(context);
+    if (activeCubit != null) {
+      content = BlocListener<ActiveTeamCubit, ActiveTeamState>(
+        bloc: activeCubit,
+        listener: (context, state) {
+          if (_selectedTeamFilter != state.teamId) {
+            setState(() => _selectedTeamFilter = state.teamId);
+          }
+        },
+        child: content,
+      );
+    }
+    return content;
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
@@ -693,6 +729,10 @@ class _PlayersListScreenState extends State<PlayersListScreen> {
       onTap: () {
         setState(() => _selectedTeamFilter = id);
         Navigator.of(ctx).pop();
+        if (id != 'all') {
+          final cubit = _tryGetActiveTeamCubit(context);
+          cubit?.selectById(id);
+        }
       },
       borderRadius: BorderRadius.circular(10),
       child: Container(

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:tadamon_attendance_app/core/widgets/attendance_badge.dart';
 import 'package:tadamon_attendance_app/features/reports/domain/entities/admin_summary_report.dart';
 import 'package:tadamon_attendance_app/features/reports/domain/entities/audit_entry.dart';

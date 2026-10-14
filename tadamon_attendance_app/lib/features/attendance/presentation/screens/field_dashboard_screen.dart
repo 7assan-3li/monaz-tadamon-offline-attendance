@@ -4,6 +4,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:tadamon_attendance_app/core/constants/app_colors.dart';
 import 'package:tadamon_attendance_app/core/widgets/app_button.dart';
 import 'package:tadamon_attendance_app/core/widgets/app_card.dart';
+import 'package:tadamon_attendance_app/core/di/service_locator.dart';
+import 'package:tadamon_attendance_app/features/teams/presentation/bloc/active_team_cubit.dart';
 import 'package:tadamon_attendance_app/features/attendance/domain/entities/attendance_session.dart';
 import 'package:tadamon_attendance_app/features/attendance/presentation/bloc/attendance_bloc.dart';
 
@@ -332,7 +334,15 @@ class _FieldDashboardScreenState extends State<FieldDashboardScreen> {
   }
 
   void _showStartSessionSheet(BuildContext context) {
-    String selectedTeam = 'team-first';
+    ActiveTeamCubit? activeCubit;
+    try {
+      activeCubit = context.read<ActiveTeamCubit>();
+    } catch (_) {
+      if (serviceLocator.isRegistered<ActiveTeamCubit>()) {
+        activeCubit = serviceLocator<ActiveTeamCubit>();
+      }
+    }
+    String selectedTeam = activeCubit?.state.teamId ?? 'team-first';
     String selectedPeriod = 'مسائي';
     final locationController = TextEditingController(text: 'ملعب بارادم');
 
@@ -462,6 +472,7 @@ class _FieldDashboardScreenState extends State<FieldDashboardScreen> {
                 leadingIcon: LucideIcons.play,
                 onPressed: () {
                   Navigator.of(ctx).pop();
+                  activeCubit?.selectById(selectedTeam);
                   context.read<AttendanceBloc>().add(
                         CreateNewSessionEvent(
                           teamId: selectedTeam,
