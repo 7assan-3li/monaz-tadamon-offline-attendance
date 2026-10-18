@@ -12,6 +12,13 @@ class AttendanceDao {
   const AttendanceDao(this._database, this._guard);
   final AppDatabase _database;
   final AttendanceWriteGuard _guard;
+  static String _normalizePeriod(String period) {
+    final p = period.trim().toLowerCase();
+    if (p == 'morning' || p.contains('صباح')) return 'صباحي';
+    if (p == 'evening' || p.contains('مساء')) return 'مسائي';
+    if (p == 'extra' || p.contains('إضاف') || p.contains('استثنائ') || p.contains('ليل')) return 'استثنائي';
+    return period.trim();
+  }
 
   Future<AttendanceSession> createSession({
     required String teamId,
@@ -20,10 +27,11 @@ class AttendanceDao {
     String? sessionTitle,
   }) async {
     await _guard.verify();
-    final now = DateTime.now().toUtc();
+    final localNow = DateTime.now();
+    final normPeriod = _normalizePeriod(period);
     final day =
-        '${now.year.toString().padLeft(4, '0')}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
-    final id = 'session-$teamId-$day-$period-${now.millisecondsSinceEpoch}';
+        '${localNow.year.toString().padLeft(4, '0')}${localNow.month.toString().padLeft(2, '0')}${localNow.day.toString().padLeft(2, '0')}';
+    final id = 'session-$teamId-$day-$normPeriod-${localNow.millisecondsSinceEpoch}';
 
     final players = await (_database.select(_database.players)
           ..where(
@@ -36,8 +44,9 @@ class AttendanceDao {
             SessionsCompanion.insert(
               sessionUuid: id,
               teamId: teamId,
-              sessionDate: now,
-              period: Value(period),
+              sessionDate: localNow,
+              type: Value(normPeriod == 'استثنائي' ? 'تمرين استثنائي' : 'تمرين'),
+              period: Value(normPeriod),
               location: Value(location ?? 'ملعب بارادم'),
               sessionHash: 'local-$id',
             ),
@@ -62,17 +71,28 @@ class AttendanceDao {
     String? location,
   }) async {
     await _guard.verify();
+    final normPeriod = _normalizePeriod(period);
     final drafts = await getActiveDrafts(teamId: teamId);
-    final matching = drafts.where((d) => d.period == period).firstOrNull;
+    final matching = drafts.where((d) => _normalizePeriod(d.period) == normPeriod).firstOrNull;
     if (matching != null && matching.items.isNotEmpty) {
       return matching;
     }
-    if (drafts.isNotEmpty && matching == null) {
+    // Check if session for this period already exists today (even if dispatched)
+    if (normPeriod != 'استثنائي') {
+      final todaySessions = await getTodaySessions(teamId: teamId);
+      final existingDispatched = todaySessions
+          .where((s) => _normalizePeriod(s.period) == normPeriod)
+          .firstOrNull;
+      if (existingDispatched != null) {
+        return existingDispatched;
+      }
+    }
+    if (drafts.isNotEmpty && matching == null && normPeriod != 'استثنائي') {
       return drafts.first;
     }
     return createSession(
       teamId: teamId,
-      period: period,
+      period: normPeriod,
       location: location,
     );
   }
@@ -101,13 +121,16 @@ class AttendanceDao {
   }
 
   Future<List<AttendanceSession>> getTodaySessions({String? teamId}) async {
-    final now = DateTime.now().toUtc();
-    final startOfDay = DateTime.utc(now.year, now.month, now.day);
-    final endOfDay = DateTime.utc(now.year, now.month, now.day, 23, 59, 59);
+    final now = DateTime.now();
+    final startOfDayLocal = DateTime(now.year, now.month, now.day, 0, 0, 0);
+    final endOfDayLocal = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
+    final queryStart = startOfDayLocal.subtract(const Duration(hours: 14));
+    final queryEnd = endOfDayLocal.add(const Duration(hours: 14));
+
     final query = _database.select(_database.sessions)
       ..where((row) {
-        var predicate = row.sessionDate.isBiggerOrEqualValue(startOfDay) &
-            row.sessionDate.isSmallerOrEqualValue(endOfDay);
+        var predicate = row.sessionDate.isBiggerOrEqualValue(queryStart) &
+            row.sessionDate.isSmallerOrEqualValue(queryEnd);
         if (teamId != null) {
           predicate = predicate & row.teamId.equals(teamId);
         }
@@ -120,8 +143,19 @@ class AttendanceDao {
     final rows = await query.get();
     final list = <AttendanceSession>[];
     for (final row in rows) {
-      final s = await read(row.sessionUuid);
-      if (s != null) list.add(s);
+      final isToday = (row.sessionDate.toLocal().year == now.year &&
+                       row.sessionDate.toLocal().month == now.month &&
+                       row.sessionDate.toLocal().day == now.day) ||
+                      (row.sessionDate.toUtc().year == now.year &&
+                       row.sessionDate.toUtc().month == now.month &&
+                       row.sessionDate.toUtc().day == now.day) ||
+                      (row.sessionDate.year == now.year &&
+                       row.sessionDate.month == now.month &&
+                       row.sessionDate.day == now.day);
+      if (isToday) {
+        final s = await read(row.sessionUuid);
+        if (s != null) list.add(s);
+      }
     }
     return list;
   }
@@ -201,6 +235,8 @@ class AttendanceDao {
       SessionsCompanion(
         isDispatched: const Value(true),
         isLocked: const Value(true),
+        approvedAt: Value(DateTime.now().toUtc()),
+        approvedBy: const Value('إداري الميدان'),
         dispatchedAt: Value(DateTime.now().toUtc()),
         status: const Value('dispatched'),
       ),

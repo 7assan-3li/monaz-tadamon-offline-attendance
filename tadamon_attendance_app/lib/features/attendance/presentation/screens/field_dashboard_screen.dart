@@ -7,6 +7,7 @@ import 'package:tadamon_attendance_app/core/widgets/app_card.dart';
 import 'package:tadamon_attendance_app/core/di/service_locator.dart';
 import 'package:tadamon_attendance_app/features/teams/presentation/bloc/active_team_cubit.dart';
 import 'package:tadamon_attendance_app/features/attendance/domain/entities/attendance_session.dart';
+import 'package:tadamon_attendance_app/features/attendance/data/datasources/attendance_dao.dart';
 import 'package:tadamon_attendance_app/features/attendance/presentation/bloc/attendance_bloc.dart';
 
 class FieldDashboardScreen extends StatefulWidget {
@@ -345,6 +346,7 @@ class _FieldDashboardScreenState extends State<FieldDashboardScreen> {
     String selectedTeam = activeCubit?.state.teamId ?? 'team-first';
     String selectedPeriod = 'مسائي';
     final locationController = TextEditingController(text: 'ملعب بارادم');
+    final timeController = TextEditingController(text: '08:30 مساءً (ليلي)');
 
     showModalBottomSheet<void>(
       context: context,
@@ -421,7 +423,7 @@ class _FieldDashboardScreenState extends State<FieldDashboardScreen> {
               ),
               const SizedBox(height: 16),
               const Text(
-                'فترة التمرين:',
+                'فترة وتصنيف التمرين:',
                 style: TextStyle(
                   fontFamily: 'Cairo',
                   fontSize: 13,
@@ -447,18 +449,67 @@ class _FieldDashboardScreenState extends State<FieldDashboardScreen> {
                   ),
                   const SizedBox(width: 8),
                   _periodChip(
-                    '⚡ حصة إضافية',
-                    'إضافي',
+                    '⭐ تمرين استثنائي',
+                    'استثنائي',
                     selectedPeriod,
-                    (p) => setModalState(() => selectedPeriod = p),
+                    (p) {
+                      setModalState(() {
+                        selectedPeriod = p;
+                        if (locationController.text == 'ملعب بارادم') {
+                          locationController.text = 'الصالة الرياضية بالمكلا';
+                        }
+                      });
+                    },
                   ),
                 ],
               ),
+              if (selectedPeriod == 'استثنائي') ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFFDE68A)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(LucideIcons.zap, size: 16, color: Color(0xFFD97706)),
+                      SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'تمرين استثنائي إضافي (ليلي أو تكتيكي خاص) مع تحديد موعده ومكانه المحدد.',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF92400E),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: timeController,
+                  decoration: InputDecoration(
+                    labelText: 'الوقت المحدد للحصة الاستثنائية',
+                    labelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 13),
+                    prefixIcon: const Icon(LucideIcons.clock, size: 18),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               TextField(
                 controller: locationController,
                 decoration: InputDecoration(
-                  labelText: 'موقع التمرين / المنشأة',
+                  labelText: selectedPeriod == 'استثنائي'
+                      ? 'موقع الحصة الاستثنائية / المنشأة'
+                      : 'موقع التمرين / المنشأة',
                   labelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 13),
                   prefixIcon: const Icon(LucideIcons.mapPin, size: 18),
                   border: OutlineInputBorder(
@@ -468,18 +519,88 @@ class _FieldDashboardScreenState extends State<FieldDashboardScreen> {
               ),
               const SizedBox(height: 20),
               AppButton(
-                label: '🚀 بدء التحضير الميداني',
-                leadingIcon: LucideIcons.play,
-                onPressed: () {
+                label: selectedPeriod == 'استثنائي'
+                    ? '⚡ بدء تمرين استثنائي'
+                    : '🚀 بدء التحضير الميداني',
+                leadingIcon: selectedPeriod == 'استثنائي'
+                    ? LucideIcons.zap
+                    : LucideIcons.play,
+                onPressed: () async {
+                  if (selectedPeriod != 'استثنائي') {
+                    // Check if already exists today
+                    final dao = serviceLocator<AttendanceDao>();
+                    final today = await dao.getTodaySessions(teamId: selectedTeam);
+                    AttendanceSession? duplicate;
+                    for (final s in today) {
+                      if (s.period == selectedPeriod ||
+                          (selectedPeriod == 'مسائي' && s.period.contains('مساء')) ||
+                          (selectedPeriod == 'صباحي' && s.period.contains('صباح'))) {
+                        duplicate = s;
+                        break;
+                      }
+                    }
+                    if (duplicate != null) {
+                      if (!ctx.mounted) return;
+                      showDialog<void>(
+                        context: ctx,
+                        builder: (dCtx) => AlertDialog(
+                          title: const Row(
+                            children: [
+                              Icon(LucideIcons.alertTriangle, color: AppColors.unexcused, size: 22),
+                              SizedBox(width: 8),
+                              Text('حصة مسجلة مسبقاً', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 15)),
+                            ],
+                          ),
+                          content: Text(
+                            'يوجد بالفعل تمرين ($selectedPeriod) مسجل لهذا الفريق اليوم.\n'
+                            'وفقاً للائحة النادي، لا يمكن تكرار نفس الفترة لنفس الفريق في نفس اليوم.\n\n'
+                            'إذا كانت هناك حصة تدريبية إضافية أو مران ليلي، يمكنك اختيار "تمرين استثنائي" وتحديد وقته ومكانه.',
+                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(dCtx).pop(),
+                              child: const Text('إلغاء', style: TextStyle(fontFamily: 'Cairo')),
+                            ),
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.royalBlue, foregroundColor: Colors.white),
+                              icon: const Icon(LucideIcons.zap, size: 16),
+                              label: const Text('بدء تمرين استثنائي', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+                              onPressed: () {
+                                Navigator.of(dCtx).pop();
+                                setModalState(() {
+                                  selectedPeriod = 'استثنائي';
+                                  if (locationController.text == 'ملعب بارادم') {
+                                    locationController.text = 'الصالة الرياضية بالمكلا';
+                                  }
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                      return;
+                    }
+                  }
+
+                  if (!ctx.mounted) return;
                   Navigator.of(ctx).pop();
+                  if (!context.mounted) return;
                   activeCubit?.selectById(selectedTeam);
+                  
+                  final loc = locationController.text.trim().isEmpty
+                      ? (selectedPeriod == 'استثنائي' ? 'الصالة الرياضية بالمكلا' : 'ملعب بارادم')
+                      : locationController.text.trim();
+                  final finalLocation = selectedPeriod == 'استثنائي' && timeController.text.trim().isNotEmpty
+                      ? '$loc - ${timeController.text.trim()}'
+                      : loc;
+
                   context.read<AttendanceBloc>().add(
                         CreateNewSessionEvent(
                           teamId: selectedTeam,
                           period: selectedPeriod,
-                          location: locationController.text.trim().isEmpty
-                              ? 'ملعب بارادم'
-                              : locationController.text.trim(),
+                          location: finalLocation,
+                          sessionTitle: selectedPeriod == 'استثنائي' ? 'تمرين استثنائي إضافي' : null,
                         ),
                       );
                 },

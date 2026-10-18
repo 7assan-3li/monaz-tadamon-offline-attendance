@@ -93,14 +93,20 @@ class _MasterReviewApprovalScreenState
         if (state is ReportsLoaded && state.actionMessage != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.actionMessage!),
+              content: Text(
+                state.actionMessage!,
+                style: const TextStyle(fontFamily: 'Cairo'),
+              ),
               backgroundColor: AppColors.royalBlue,
             ),
           );
         } else if (state is ReportsError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.message),
+              content: Text(
+                state.message,
+                style: const TextStyle(fontFamily: 'Cairo'),
+              ),
               backgroundColor: AppColors.unexcused,
             ),
           );
@@ -110,12 +116,19 @@ class _MasterReviewApprovalScreenState
         final auditLogs = state is ReportsLoaded ? state.auditLogs : [];
 
         return Scaffold(
+          backgroundColor: AppColors.canvas,
           appBar: AppBar(
-            title: const Text('مراجعة واعتماد الكشف الميداني'),
+            title: const Text(
+              'مراجعة واعتماد الكشف الميداني',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             actions: [
               IconButton(
                 icon: const Icon(LucideIcons.history),
-                tooltip: 'سجل التدقيق',
+                tooltip: 'سجل التدقيق والتعديلات',
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
@@ -143,7 +156,8 @@ class _MasterReviewApprovalScreenState
                           Text(
                             widget.teamName,
                             style: const TextStyle(
-                              fontSize: 16,
+                              fontFamily: 'Cairo',
+                              fontSize: 15,
                               fontWeight: FontWeight.bold,
                               color: AppColors.royalBlue,
                             ),
@@ -151,38 +165,51 @@ class _MasterReviewApprovalScreenState
                           const SizedBox(height: 4),
                           Text(
                             'تاريخ التمرين: ${widget.sessionDate.year}/${widget.sessionDate.month}/${widget.sessionDate.day}',
-                            style: Theme.of(context).textTheme.bodySmall,
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                         ],
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
                           color: _isApproved
-                              ? AppColors.presentBackground
+                              ? const Color(0xFFDCFCE7)
                               : AppColors.excusedBackground,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: _isApproved
+                                ? const Color(0xFFBBF7D0)
+                                : const Color(0xFFFDE68A),
+                          ),
                         ),
                         child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
                               _isApproved
                                   ? LucideIcons.badgeCheck
                                   : LucideIcons.clock,
-                              size: 16,
+                              size: 15,
                               color: _isApproved
-                                  ? AppColors.present
+                                  ? const Color(0xFF16A34A)
                                   : AppColors.excused,
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 5),
                             Text(
                               _isApproved ? 'معتمد رسمياً' : 'بانتظار الاعتماد',
                               style: TextStyle(
-                                fontSize: 12,
+                                fontFamily: 'Cairo',
+                                fontSize: 11.5,
                                 fontWeight: FontWeight.bold,
                                 color: _isApproved
-                                    ? AppColors.present
+                                    ? const Color(0xFF15803D)
                                     : AppColors.excused,
                               ),
                             ),
@@ -192,14 +219,31 @@ class _MasterReviewApprovalScreenState
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
 
-                // Player list section
-                Text(
-                  'قائمة اللاعبين وحالات الحضور الميدانية:',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                // Player list section header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'قائمة اللاعبين وحالات الحضور الميدانية:',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
                       ),
+                    ),
+                    if (state is ReportsLoaded)
+                      Text(
+                        '${state.sheet.records.length} لاعباً',
+                        style: const TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 11.5,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 8),
 
@@ -214,35 +258,52 @@ class _MasterReviewApprovalScreenState
                             final status = record.statusByDate[widget.sessionDate] ??
                                 AttendanceStatus.present;
 
-                            return AppCard(
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
                               child: Row(
                                 children: [
                                   CircleAvatar(
-                                    radius: 18,
-                                    backgroundColor: AppColors.canvas,
+                                    radius: 17,
+                                    backgroundColor: AppColors.royalBlue.withValues(alpha: 0.1),
                                     child: Text(
                                       '${record.jerseyNumber}',
                                       style: const TextStyle(
+                                        fontFamily: 'Cairo',
+                                        fontSize: 12,
                                         fontWeight: FontWeight.bold,
                                         color: AppColors.royalBlue,
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
+                                  const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
                                       record.playerName,
                                       style: const TextStyle(
+                                        fontFamily: 'Cairo',
+                                        fontSize: 13,
                                         fontWeight: FontWeight.w600,
+                                        color: AppColors.textPrimary,
                                       ),
                                     ),
                                   ),
                                   AttendanceBadge(status: status),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 6),
                                   IconButton(
-                                    icon: const Icon(LucideIcons.pencil,
-                                        size: 18, color: AppColors.royalBlue),
-                                    tooltip: 'تعديل استثنائي بالسبب',
+                                    icon: const Icon(
+                                      LucideIcons.pencil,
+                                      size: 16,
+                                      color: AppColors.royalBlue,
+                                    ),
+                                    tooltip: 'تعديل استثنائي بمسوغ إداري',
                                     onPressed: () => _onEditPlayer(
                                       context,
                                       record.playerId,
@@ -260,19 +321,46 @@ class _MasterReviewApprovalScreenState
 
                 const SizedBox(height: 12),
 
-                // Primary Approval Action
-                AppButton(
-                  label: _isApproved
-                      ? 'تم اعتماد الكشف رسمياً في سجلات النادي'
-                      : 'اعتماد الكشف نهائياً',
-                  leadingIcon: _isApproved
-                      ? LucideIcons.badgeCheck
-                      : LucideIcons.checkCheck,
-                  variant: _isApproved
-                      ? AppButtonVariant.secondary
-                      : AppButtonVariant.primary,
-                  onPressed: _isApproved ? null : () => _onApprove(context),
-                ),
+                // Primary Approval Action or Accredited Status Banner
+                if (_isApproved)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFBBF7D0)),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          LucideIcons.badgeCheck,
+                          size: 20,
+                          color: Color(0xFF16A34A),
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'كشف معتمد ومقفل رسمياً في سجلات النادي',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF15803D),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  AppButton(
+                    label: 'اعتماد الكشف نهائياً',
+                    leadingIcon: LucideIcons.checkCheck,
+                    variant: AppButtonVariant.primary,
+                    onPressed: () => _onApprove(context),
+                  ),
               ],
             ),
           ),

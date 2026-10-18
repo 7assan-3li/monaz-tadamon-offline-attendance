@@ -73,26 +73,68 @@ class ReportsRepositoryImpl implements ReportsRepository {
     final teamName = team?.name ?? 'الفريق الأول';
 
     final startDate = customStartDate ?? DateTime.utc(year, month, 1);
-    final endDate = customEndDate != null
-        ? customEndDate.add(const Duration(days: 1))
-        : DateTime.utc(year, month + 1, 1);
+    DateTime queryStart;
+    DateTime queryEnd;
+    if (customStartDate != null) {
+      final start = customStartDate;
+      final end = customEndDate ?? customStartDate;
+      final localStart = DateTime(start.year, start.month, start.day, 0, 0, 0);
+      final localEnd = DateTime(end.year, end.month, end.day, 23, 59, 59, 999);
+      queryStart = localStart.subtract(const Duration(hours: 14));
+      queryEnd = localEnd.add(const Duration(hours: 14));
+    } else {
+      queryStart = DateTime.utc(year, month, 1).subtract(const Duration(hours: 14));
+      queryEnd = DateTime.utc(year, month + 1, 1).add(const Duration(hours: 14));
+    }
 
-    // Fetch sessions in month with optional period filter
+    final String? normPeriod = switch (period) {
+      'morning' => 'صباحي',
+      'evening' => 'مسائي',
+      'extra' => 'استثنائي',
+      _ => period,
+    };
+
+    // Fetch sessions in range with optional period filter
     final sessionsQuery = database.select(database.sessions)
       ..where((tbl) =>
           tbl.teamId.equals(teamId) &
-          tbl.sessionDate.isBiggerOrEqualValue(startDate) &
-          tbl.sessionDate.isSmallerThanValue(endDate));
+          tbl.sessionDate.isBiggerOrEqualValue(queryStart) &
+          tbl.sessionDate.isSmallerOrEqualValue(queryEnd));
 
-    if (period != null && period.isNotEmpty && period != 'all') {
-      sessionsQuery.where((tbl) => tbl.period.equals(period));
+    if (normPeriod != null && normPeriod.isNotEmpty && normPeriod != 'all') {
+      sessionsQuery.where((tbl) =>
+          tbl.period.equals(normPeriod) |
+          (normPeriod == 'صباحي'
+              ? tbl.period.equals('morning')
+              : normPeriod == 'مسائي'
+                  ? tbl.period.equals('evening')
+                  : (tbl.period.equals('extra') | tbl.period.equals('إضافي'))));
     }
 
     sessionsQuery.orderBy([
       (tbl) => OrderingTerm(expression: tbl.sessionDate, mode: OrderingMode.desc),
     ]);
 
-    final sessions = await sessionsQuery.get();
+    final rawSessions = await sessionsQuery.get();
+
+    final sessions = rawSessions.where((s) {
+      if (customStartDate == null) {
+        return (s.sessionDate.toLocal().year == year && s.sessionDate.toLocal().month == month) ||
+               (s.sessionDate.toUtc().year == year && s.sessionDate.toUtc().month == month) ||
+               (s.sessionDate.year == year && s.sessionDate.month == month);
+      }
+      final start = customStartDate;
+      final end = customEndDate ?? customStartDate;
+      final startDay = DateTime(start.year, start.month, start.day);
+      final endDay = DateTime(end.year, end.month, end.day, 23, 59, 59, 999);
+
+      final dLocal = DateTime(s.sessionDate.toLocal().year, s.sessionDate.toLocal().month, s.sessionDate.toLocal().day);
+      final dUtc = DateTime(s.sessionDate.toUtc().year, s.sessionDate.toUtc().month, s.sessionDate.toUtc().day);
+      final dRaw = DateTime(s.sessionDate.year, s.sessionDate.month, s.sessionDate.day);
+
+      bool inRange(DateTime d) => !d.isBefore(startDay) && !d.isAfter(endDay);
+      return inRange(dLocal) || inRange(dUtc) || inRange(dRaw);
+    }).toList();
 
     final sessionDates = sessions.map((s) => s.sessionDate).toList();
     final sessionUuids = sessions.map((s) => s.sessionUuid).toList();
@@ -259,21 +301,63 @@ class ReportsRepositoryImpl implements ReportsRepository {
     final clubDirectorName = settings?.adminName ?? 'مدير النادي المعتمد';
 
     final startDate = customStartDate ?? DateTime.utc(year, month, 1);
-    final endDate = customEndDate != null
-        ? customEndDate.add(const Duration(days: 1))
-        : DateTime.utc(year, month + 1, 1);
+    DateTime queryStart;
+    DateTime queryEnd;
+    if (customStartDate != null) {
+      final start = customStartDate;
+      final end = customEndDate ?? customStartDate;
+      final localStart = DateTime(start.year, start.month, start.day, 0, 0, 0);
+      final localEnd = DateTime(end.year, end.month, end.day, 23, 59, 59, 999);
+      queryStart = localStart.subtract(const Duration(hours: 14));
+      queryEnd = localEnd.add(const Duration(hours: 14));
+    } else {
+      queryStart = DateTime.utc(year, month, 1).subtract(const Duration(hours: 14));
+      queryEnd = DateTime.utc(year, month + 1, 1).add(const Duration(hours: 14));
+    }
+
+    final String? normPeriod = switch (period) {
+      'morning' => 'صباحي',
+      'evening' => 'مسائي',
+      'extra' => 'استثنائي',
+      _ => period,
+    };
 
     final sessionsQuery = database.select(database.sessions)
           ..where((tbl) =>
               tbl.teamId.equals(teamId) &
-              tbl.sessionDate.isBiggerOrEqualValue(startDate) &
-              tbl.sessionDate.isSmallerThanValue(endDate));
+              tbl.sessionDate.isBiggerOrEqualValue(queryStart) &
+              tbl.sessionDate.isSmallerOrEqualValue(queryEnd));
 
-    if (period != null && period.isNotEmpty && period != 'all') {
-      sessionsQuery.where((tbl) => tbl.period.equals(period));
+    if (normPeriod != null && normPeriod.isNotEmpty && normPeriod != 'all') {
+      sessionsQuery.where((tbl) =>
+          tbl.period.equals(normPeriod) |
+          (normPeriod == 'صباحي'
+              ? tbl.period.equals('morning')
+              : normPeriod == 'مسائي'
+                  ? tbl.period.equals('evening')
+                  : (tbl.period.equals('extra') | tbl.period.equals('إضافي'))));
     }
 
-    final sessions = await sessionsQuery.get();
+    final rawSessions = await sessionsQuery.get();
+
+    final sessions = rawSessions.where((s) {
+      if (customStartDate == null) {
+        return (s.sessionDate.toLocal().year == year && s.sessionDate.toLocal().month == month) ||
+               (s.sessionDate.toUtc().year == year && s.sessionDate.toUtc().month == month) ||
+               (s.sessionDate.year == year && s.sessionDate.month == month);
+      }
+      final start = customStartDate;
+      final end = customEndDate ?? customStartDate;
+      final startDay = DateTime(start.year, start.month, start.day);
+      final endDay = DateTime(end.year, end.month, end.day, 23, 59, 59, 999);
+
+      final dLocal = DateTime(s.sessionDate.toLocal().year, s.sessionDate.toLocal().month, s.sessionDate.toLocal().day);
+      final dUtc = DateTime(s.sessionDate.toUtc().year, s.sessionDate.toUtc().month, s.sessionDate.toUtc().day);
+      final dRaw = DateTime(s.sessionDate.year, s.sessionDate.month, s.sessionDate.day);
+
+      bool inRange(DateTime d) => !d.isBefore(startDay) && !d.isAfter(endDay);
+      return inRange(dLocal) || inRange(dUtc) || inRange(dRaw);
+    }).toList();
 
     final sessionUuids = sessions.map((s) => s.sessionUuid).toList();
 

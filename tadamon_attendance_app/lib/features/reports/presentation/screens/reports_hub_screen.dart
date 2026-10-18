@@ -785,14 +785,16 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
           ),
           const SizedBox(height: 10),
 
-          // Period Chips Row: الكل | ☀️ صباحي | 🌙 مسائي
+          // Period Chips Row: الكل | ☀️ صباحي | 🌙 مسائي | ⭐ استثنائي
           Row(
             children: [
               _buildPeriodChip(label: 'الكل', value: 'all', icon: LucideIcons.layers),
-              const SizedBox(width: 6),
+              const SizedBox(width: 5),
               _buildPeriodChip(label: 'صباحي', value: 'morning', icon: LucideIcons.sunMedium),
-              const SizedBox(width: 6),
+              const SizedBox(width: 5),
               _buildPeriodChip(label: 'مسائي', value: 'evening', icon: LucideIcons.moon),
+              const SizedBox(width: 5),
+              _buildPeriodChip(label: 'استثنائي', value: 'extra', icon: LucideIcons.zap),
             ],
           ),
           const SizedBox(height: 10),
@@ -1408,18 +1410,19 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
   ) {
     final arabicDate = _formatArabicDate(session.date);
     final periodName = switch (session.period) {
-      'morning' => 'تمرين صباحي',
-      'evening' => 'تمرين مسائي',
-      'extra' => 'فترة خاصة',
+      'morning' || 'صباحي' => 'تمرين صباحي',
+      'evening' || 'مسائي' => 'تمرين مسائي',
+      'extra' || 'استثنائي' || 'إضافي' => 'تمرين استثنائي',
       _ => 'حصة تدريبية',
     };
     final periodIcon = switch (session.period) {
-      'morning' => LucideIcons.sunMedium,
-      'evening' => LucideIcons.moon,
-      'extra' => LucideIcons.zap,
+      'morning' || 'صباحي' => LucideIcons.sunMedium,
+      'evening' || 'مسائي' => LucideIcons.moon,
+      'extra' || 'استثنائي' || 'إضافي' => LucideIcons.zap,
       _ => LucideIcons.dumbbell,
     };
     final rate = session.attendanceRate.round();
+    final isOfficial = session.isApproved || session.isDispatched || session.isLocked;
 
     return Container(
       decoration: BoxDecoration(
@@ -1449,7 +1452,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                     sessionUuid: session.sessionUuid,
                     sessionDate: session.date,
                     teamName: teamName,
-                    isInitiallyApproved: session.isApproved,
+                    isInitiallyApproved: isOfficial,
                   ),
                 ),
               ),
@@ -1527,6 +1530,33 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                         ],
                       ),
                     ),
+                    if (isOfficial) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFBFDBFE)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(LucideIcons.badgeCheck, size: 12, color: AppColors.royalBlue),
+                            SizedBox(width: 3),
+                            Text(
+                              'معتمد ومقفل',
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.royalBlue,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                       decoration: BoxDecoration(
