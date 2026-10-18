@@ -39,15 +39,23 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
   Future<AttendanceSession?> readSession(String id) => _dao.read(id);
 
   @override
-  Future<AttendanceSession> markAllPresent(String id) =>
-      _dao.markAllPresent(id);
+  Future<AttendanceSession> markAllPresent(
+    String id, {
+    bool allowAdminOverride = false,
+  }) => _dao.markAllPresent(id, allowAdminOverride: allowAdminOverride);
 
   @override
   Future<AttendanceSession> updateStatus(
     String id,
     String playerId,
-    PlayerAttendanceStatus status,
-  ) => _dao.updateStatus(id, playerId, status);
+    PlayerAttendanceStatus status, {
+    bool allowAdminOverride = false,
+  }) => _dao.updateStatus(
+    id,
+    playerId,
+    status,
+    allowAdminOverride: allowAdminOverride,
+  );
 
   @override
   Future<AttendanceSession> dispatch(String id) => _dao.dispatch(id);

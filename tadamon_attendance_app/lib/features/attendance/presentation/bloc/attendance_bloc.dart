@@ -42,21 +42,25 @@ class SwitchActiveSessionEvent extends AttendanceEvent {
 }
 
 class MarkAllPresentEvent extends AttendanceEvent {
-  const MarkAllPresentEvent();
+  const MarkAllPresentEvent({this.allowAdminOverride = false});
+  final bool allowAdminOverride;
 }
 
 class UpdatePlayerStatusEvent extends AttendanceEvent {
-  const UpdatePlayerStatusEvent(this.playerId);
+  const UpdatePlayerStatusEvent(this.playerId, {this.allowAdminOverride = false});
   final String playerId;
+  final bool allowAdminOverride;
 }
 
 class SetPlayerAttendanceStatusEvent extends AttendanceEvent {
   const SetPlayerAttendanceStatusEvent({
     required this.playerId,
     required this.status,
+    this.allowAdminOverride = false,
   });
   final String playerId;
   final PlayerAttendanceStatus status;
+  final bool allowAdminOverride;
 }
 
 class DispatchSessionEvent extends AttendanceEvent {
@@ -169,23 +173,44 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     });
 
     on<MarkAllPresentEvent>(
-      (event, emit) async =>
-          _runCurrent(emit, (session) => _markAll(session.sessionUuid)),
+      (event, emit) async => _runCurrent(
+        emit,
+        (session) => _markAll(
+          session.sessionUuid,
+          allowAdminOverride: event.allowAdminOverride,
+        ),
+        allowAdminOverride: event.allowAdminOverride,
+      ),
     );
 
     on<UpdatePlayerStatusEvent>(
-      (event, emit) async => _runCurrent(emit, (session) {
-        final item = session.items.firstWhere(
-          (entry) => entry.playerId == event.playerId,
-        );
-        return _update(session.sessionUuid, item.playerId, item.status.next);
-      }),
+      (event, emit) async => _runCurrent(
+        emit,
+        (session) {
+          final item = session.items.firstWhere(
+            (entry) => entry.playerId == event.playerId,
+          );
+          return _update(
+            session.sessionUuid,
+            item.playerId,
+            item.status.next,
+            allowAdminOverride: event.allowAdminOverride,
+          );
+        },
+        allowAdminOverride: event.allowAdminOverride,
+      ),
     );
 
     on<SetPlayerAttendanceStatusEvent>(
       (event, emit) async => _runCurrent(
         emit,
-        (session) => _update(session.sessionUuid, event.playerId, event.status),
+        (session) => _update(
+          session.sessionUuid,
+          event.playerId,
+          event.status,
+          allowAdminOverride: event.allowAdminOverride,
+        ),
+        allowAdminOverride: event.allowAdminOverride,
       ),
     );
 
@@ -215,10 +240,12 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
 
   Future<void> _runCurrent(
     Emitter<AttendanceState> emit,
-    Future<AttendanceSession> Function(AttendanceSession) action,
-  ) async {
+    Future<AttendanceSession> Function(AttendanceSession) action, {
+    bool allowAdminOverride = false,
+  }) async {
     final current = state;
-    if (current is! AttendanceReady || current.session.isLocked) return;
+    if (current is! AttendanceReady) return;
+    if (current.session.isLocked && !allowAdminOverride) return;
     try {
       final updatedSession = await action(current.session);
       final drafts = await _loadDrafts(updatedSession.teamId);

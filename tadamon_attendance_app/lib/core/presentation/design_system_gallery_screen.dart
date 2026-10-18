@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:tadamon_attendance_app/core/constants/app_colors.dart';
 import 'package:tadamon_attendance_app/core/database/app_database.dart';
 import 'package:tadamon_attendance_app/core/di/service_locator.dart';
+import 'package:tadamon_attendance_app/core/presentation/app_role_scope.dart';
 import 'package:tadamon_attendance_app/core/widgets/app_button.dart';
 import 'package:tadamon_attendance_app/core/widgets/app_card.dart';
 import 'package:tadamon_attendance_app/core/widgets/squircle_icon_container.dart';
@@ -85,6 +86,10 @@ class _DesignSystemGalleryScreenState extends State<DesignSystemGalleryScreen> {
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         children: [
+          // 0. Account & Device Role Indicator
+          _buildAccountRoleCard(context),
+          const SizedBox(height: 12),
+
           // 1. Squad & Subscription Bar
           _buildSquadBar(),
           const SizedBox(height: 12),
@@ -119,7 +124,215 @@ class _DesignSystemGalleryScreenState extends State<DesignSystemGalleryScreen> {
     return content;
   }
 
+  Widget _buildAccountRoleCard(BuildContext context) {
+    final isMaster = AppRoleScope.isMaster(context);
+
+    if (isMaster) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0F172A), Color(0xFF1E3A8A)],
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
+          ),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: const Color(0xFF3B82F6).withValues(alpha: 0.4),
+            width: 1.2,
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x18000000),
+              blurRadius: 8,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF59E0B).withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
+                ),
+              ),
+              child: const Icon(
+                LucideIcons.crown,
+                size: 20,
+                color: Color(0xFFFBBF24),
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'جهاز الإدارة العامة',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(width: 6),
+                      Icon(
+                        LucideIcons.badgeCheck,
+                        size: 15,
+                        color: Color(0xFF38BDF8),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 1),
+                  Text(
+                    'صلاحيات إدارية كاملة • تعديل واعتماد الكشوفات وإدارة الفرق',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 10.5,
+                      color: Color(0xFFBFDBFE),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF34D399), width: 0.8),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    LucideIcons.shieldCheck,
+                    size: 12,
+                    color: Color(0xFF34D399),
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    'إدارة معتمدة',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFA7F3D0),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0284C7).withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              LucideIcons.radio,
+              size: 20,
+              color: Color(0xFF0284C7),
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'جهاز التحضير الميداني',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    SizedBox(width: 6),
+                    Icon(LucideIcons.lock, size: 14, color: Color(0xFF64748B)),
+                  ],
+                ),
+                SizedBox(height: 1),
+                Text(
+                  'صلاحية الميدان • رصد وترحيل فقط (يُقفل التمرين فور ترحيله للإدارة)',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 10.5,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFCBD5E1)),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  LucideIcons.userCheck,
+                  size: 12,
+                  color: Color(0xFF475569),
+                ),
+                SizedBox(width: 4),
+                Text(
+                  'محضر ميداني',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF475569),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   PreferredSizeWidget _buildAppBar(BuildContext context) {
+    final isMaster = AppRoleScope.isMaster(context);
+
     return AppBar(
       elevation: 0,
       backgroundColor: AppColors.royalBlue,
@@ -162,20 +375,43 @@ class _DesignSystemGalleryScreenState extends State<DesignSystemGalleryScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 5,
-                        vertical: 1,
+                        vertical: 1.5,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
+                        color: isMaster
+                            ? const Color(0xFFF59E0B).withValues(alpha: 0.25)
+                            : const Color(0xFF10B981).withValues(alpha: 0.25),
                         borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text(
-                        'الرسمي',
-                        style: TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF38BDF8),
+                        border: Border.all(
+                          color: isMaster
+                              ? const Color(0xFFFBBF24)
+                              : const Color(0xFF34D399),
+                          width: 0.8,
                         ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isMaster ? LucideIcons.crown : LucideIcons.radio,
+                            size: 9.5,
+                            color: isMaster
+                                ? const Color(0xFFFDE68A)
+                                : const Color(0xFFA7F3D0),
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            isMaster ? 'جهاز الإدارة' : 'جهاز الميدان',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: isMaster
+                                  ? const Color(0xFFFEF3C7)
+                                  : const Color(0xFFD1FAE5),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

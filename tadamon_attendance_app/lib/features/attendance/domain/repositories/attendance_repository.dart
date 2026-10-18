@@ -16,12 +16,16 @@ abstract interface class AttendanceRepository {
   Future<List<AttendanceSession>> getActiveDrafts({String? teamId});
   Future<List<AttendanceSession>> getTodaySessions({String? teamId});
   Future<AttendanceSession?> readSession(String sessionUuid);
-  Future<AttendanceSession> markAllPresent(String sessionUuid);
+  Future<AttendanceSession> markAllPresent(
+    String sessionUuid, {
+    bool allowAdminOverride = false,
+  });
   Future<AttendanceSession> updateStatus(
     String sessionUuid,
     String playerId,
-    PlayerAttendanceStatus status,
-  );
+    PlayerAttendanceStatus status, {
+    bool allowAdminOverride = false,
+  });
   Future<AttendanceSession> dispatch(String sessionUuid);
 }
 

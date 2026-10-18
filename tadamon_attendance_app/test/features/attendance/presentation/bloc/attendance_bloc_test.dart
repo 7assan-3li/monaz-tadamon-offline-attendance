@@ -154,21 +154,24 @@ class _Repository implements AttendanceRepository {
   Future<AttendanceSession?> readSession(String id) async => session;
 
   @override
-  Future<AttendanceSession> markAllPresent(String id) async =>
-      session = session.copyWith(
-        items: session.items
-            .map(
-              (item) => item.copyWith(status: PlayerAttendanceStatus.present),
-            )
-            .toList(),
-      );
+  Future<AttendanceSession> markAllPresent(
+    String id, {
+    bool allowAdminOverride = false,
+  }) async => session = session.copyWith(
+    items: session.items
+        .map(
+          (item) => item.copyWith(status: PlayerAttendanceStatus.present),
+        )
+        .toList(),
+  );
 
   @override
   Future<AttendanceSession> updateStatus(
     String id,
     String playerId,
-    PlayerAttendanceStatus status,
-  ) async => session = session.copyWith(
+    PlayerAttendanceStatus status, {
+    bool allowAdminOverride = false,
+  }) async => session = session.copyWith(
     items: session.items
         .map(
           (item) =>

@@ -56,7 +56,10 @@ class ReadSessionUseCase {
 class MarkAllPresentUseCase {
   const MarkAllPresentUseCase(this.repository);
   final AttendanceRepository repository;
-  Future<AttendanceSession> call(String id) => repository.markAllPresent(id);
+  Future<AttendanceSession> call(
+    String id, {
+    bool allowAdminOverride = false,
+  }) => repository.markAllPresent(id, allowAdminOverride: allowAdminOverride);
 }
 
 class UpdatePlayerStatusUseCase {
@@ -65,8 +68,14 @@ class UpdatePlayerStatusUseCase {
   Future<AttendanceSession> call(
     String id,
     String playerId,
-    PlayerAttendanceStatus status,
-  ) => repository.updateStatus(id, playerId, status);
+    PlayerAttendanceStatus status, {
+    bool allowAdminOverride = false,
+  }) => repository.updateStatus(
+    id,
+    playerId,
+    status,
+    allowAdminOverride: allowAdminOverride,
+  );
 }
 
 class DispatchSessionUseCase {

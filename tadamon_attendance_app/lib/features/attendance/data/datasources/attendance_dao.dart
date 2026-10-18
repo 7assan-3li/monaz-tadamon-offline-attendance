@@ -202,8 +202,11 @@ class AttendanceDao {
     );
   }
 
-  Future<AttendanceSession> markAllPresent(String id) async {
-    await _ensureWritable(id);
+  Future<AttendanceSession> markAllPresent(
+    String id, {
+    bool allowAdminOverride = false,
+  }) async {
+    await _ensureWritable(id, allowAdminOverride: allowAdminOverride);
     await (_database.update(
       _database.attendanceRecords,
     )..where((row) => row.sessionUuid.equals(id))).write(
@@ -217,9 +220,10 @@ class AttendanceDao {
   Future<AttendanceSession> updateStatus(
     String id,
     String playerId,
-    PlayerAttendanceStatus status,
-  ) async {
-    await _ensureWritable(id);
+    PlayerAttendanceStatus status, {
+    bool allowAdminOverride = false,
+  }) async {
+    await _ensureWritable(id, allowAdminOverride: allowAdminOverride);
     await (_database.update(_database.attendanceRecords)..where(
           (row) => row.sessionUuid.equals(id) & row.playerId.equals(playerId),
         ))
@@ -244,12 +248,18 @@ class AttendanceDao {
     return (await read(id))!;
   }
 
-  Future<void> _ensureWritable(String id) async {
+  Future<void> _ensureWritable(
+    String id, {
+    bool allowAdminOverride = false,
+  }) async {
     await _guard.verify();
     final session = await (_database.select(
       _database.sessions,
     )..where((row) => row.sessionUuid.equals(id))).getSingleOrNull();
-    if (session == null || session.isLocked || session.isDispatched) {
+    if (session == null) {
+      throw const LockedAttendanceSessionException();
+    }
+    if (!allowAdminOverride && (session.isLocked || session.isDispatched)) {
       throw const LockedAttendanceSessionException();
     }
   }

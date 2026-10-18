@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:tadamon_attendance_app/core/constants/app_colors.dart';
 import 'package:tadamon_attendance_app/core/di/service_locator.dart';
+import 'package:tadamon_attendance_app/core/presentation/app_role_scope.dart';
 import 'package:tadamon_attendance_app/core/widgets/app_button.dart';
 import 'package:tadamon_attendance_app/core/widgets/app_card.dart';
 import 'package:tadamon_attendance_app/core/widgets/confirmation_dialog.dart';
@@ -33,6 +34,7 @@ class DispatchReviewScreen extends StatelessWidget {
             );
           }
           final session = state.session;
+          final isMaster = AppRoleScope.isMaster(context);
           final periodLabel = switch (session.period) {
             'صباحي' => 'الفترة الصباحية (لياقة)',
             'إضافي' => 'حصة تدريبية إضافية',
@@ -44,17 +46,19 @@ class DispatchReviewScreen extends StatelessWidget {
             appBar: AppBar(
               title: Text(
                 session.isLocked
-                    ? 'خلاصة التمرين المرحّل'
+                    ? (isMaster
+                        ? 'خلاصة التمرين (الإدارة العامة)'
+                        : 'خلاصة التمرين المرحّل')
                     : 'مراجعة التمرين والترحيل',
                 style: const TextStyle(
                   fontFamily: 'Cairo',
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              leading: (!session.isLocked && onBack != null)
+              leading: ((!session.isLocked || isMaster) && onBack != null)
                   ? IconButton(
                       icon: const Icon(LucideIcons.arrowRight),
-                      tooltip: 'رجوع للتحضير',
+                      tooltip: 'رجوع لكشف التحضير',
                       onPressed: onBack,
                     )
                   : (session.isLocked && onReturnHome != null)
@@ -73,7 +77,41 @@ class DispatchReviewScreen extends StatelessWidget {
                   if (session.isLocked) ...[
                     _buildSuccessBanner(context, periodLabel),
                     const SizedBox(height: 12),
-                    const LockedSessionBanner(),
+                    if (isMaster)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF93C5FD)),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              LucideIcons.badgeCheck,
+                              color: Color(0xFF1D4ED8),
+                              size: 18,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'كشف معتمد إدارياً • متاح الرجوع للتعديل الإداري في أي وقت',
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                color: Color(0xFF1E40AF),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      const LockedSessionBanner(),
                     const SizedBox(height: 16),
                   ],
 
@@ -188,11 +226,24 @@ class DispatchReviewScreen extends StatelessWidget {
                       ),
                     ),
                   ] else ...[
+                    if (isMaster && onBack != null) ...[
+                      AppButton(
+                        label: 'تعديل كشف التحضير (صلاحية الإدارة)',
+                        leadingIcon: LucideIcons.pencil,
+                        variant: AppButtonVariant.primary,
+                        onPressed: onBack,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     // When locked, provide primary navigation buttons
                     AppButton(
                       label: 'العودة إلى الشاشة الرئيسية',
                       leadingIcon: LucideIcons.home,
-                      onPressed: onReturnHome ?? () => Navigator.of(context).maybePop(),
+                      variant: isMaster
+                          ? AppButtonVariant.secondary
+                          : AppButtonVariant.primary,
+                      onPressed: onReturnHome ??
+                          () => Navigator.of(context).maybePop(),
                     ),
                     const SizedBox(height: 12),
                     if (onStartAnotherSession != null) ...[

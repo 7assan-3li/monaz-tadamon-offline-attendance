@@ -10,6 +10,7 @@ import 'package:tadamon_attendance_app/features/attendance/presentation/widgets/
 import 'package:tadamon_attendance_app/features/attendance/presentation/widgets/locked_session_banner.dart';
 import 'package:tadamon_attendance_app/features/attendance/presentation/widgets/one_touch_present_button.dart';
 import 'package:tadamon_attendance_app/core/di/service_locator.dart';
+import 'package:tadamon_attendance_app/core/presentation/app_role_scope.dart';
 import 'package:tadamon_attendance_app/features/teams/presentation/bloc/active_team_cubit.dart';
 
 class QuickAttendanceScreen extends StatefulWidget {
@@ -78,6 +79,7 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
 
         final session = state.session;
         final filteredItems = _filterPlayers(session.items);
+        final isMaster = AppRoleScope.isMaster(context);
 
         final scaffold = Scaffold(
           backgroundColor: AppColors.canvas,
@@ -90,12 +92,15 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
                   children: [
                     const SizedBox(height: 10),
                     if (session.isLocked) ...[
-                      const LockedSessionBanner(),
+                      if (isMaster)
+                        _buildAdminEditBanner()
+                      else
+                        const LockedSessionBanner(),
                       const SizedBox(height: 12),
                     ],
 
                     // الشريط الميداني لاختيار الفئة وحالة الحافظة (Interactive Squad Bar)
-                    _buildSquadBar(session),
+                    _buildSquadBar(session, isMaster),
                     const SizedBox(height: 12),
 
                     // حقل البحث السريع
@@ -109,11 +114,11 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
                     // زر التسريع الميداني بلمسة واحدة
                     OneTouchPresentButton(
                       playerCount: session.items.length,
-                      onPressed: session.isLocked
-                          ? null
-                          : () => context.read<AttendanceBloc>().add(
-                              const MarkAllPresentEvent(),
-                            ),
+                      onPressed: (!session.isLocked || isMaster)
+                          ? () => context.read<AttendanceBloc>().add(
+                              MarkAllPresentEvent(allowAdminOverride: isMaster),
+                            )
+                          : null,
                     ),
                     const SizedBox(height: 12),
 
@@ -128,15 +133,19 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
                       ...filteredItems.map(
                         (item) => AttendancePlayerCard(
                           item: item,
-                          enabled: !session.isLocked,
+                          enabled: !session.isLocked || isMaster,
                           onTap: () => context.read<AttendanceBloc>().add(
-                            UpdatePlayerStatusEvent(item.playerId),
+                            UpdatePlayerStatusEvent(
+                              item.playerId,
+                              allowAdminOverride: isMaster,
+                            ),
                           ),
                           onStatusSelected: (status) =>
                               context.read<AttendanceBloc>().add(
                                 SetPlayerAttendanceStatusEvent(
                                   playerId: item.playerId,
                                   status: status,
+                                  allowAdminOverride: isMaster,
                                 ),
                               ),
                         ),
@@ -291,7 +300,96 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
     );
   }
 
-  Widget _buildSquadBar(AttendanceSession session) {
+  Widget _buildAdminEditBanner() => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        colors: [Color(0xFF0F172A), Color(0xFF1E3A8A)],
+        begin: Alignment.topRight,
+        end: Alignment.bottomLeft,
+      ),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: const Color(0xFF3B82F6).withValues(alpha: 0.5),
+        width: 1.2,
+      ),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x18000000),
+          blurRadius: 6,
+          offset: Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(7),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF59E0B).withValues(alpha: 0.2),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
+            ),
+          ),
+          child: const Icon(LucideIcons.crown, size: 18, color: Color(0xFFFBBF24)),
+        ),
+        const SizedBox(width: 10),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'كشف مرحّل - صلاحية التعديل الإداري (الإدارة العامة)',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(width: 6),
+                  Icon(LucideIcons.badgeCheck, size: 14, color: Color(0xFF38BDF8)),
+                ],
+              ),
+              SizedBox(height: 1),
+              Text(
+                'بصفتك إدارة النادي، يمكنك تعديل حالات الحضور الميدانية واعتمادها رسمياً.',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 10.5,
+                  color: Color(0xFFBFDBFE),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: const Color(0xFF10B981).withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: const Color(0xFF34D399), width: 0.8),
+          ),
+          child: const Text(
+            'تعديل متاح',
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFFA7F3D0),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _buildSquadBar(AttendanceSession session, bool isMaster) {
     final currentSquadName = switch (session.teamId) {
       'team-first' => 'الفريق الأول',
       'team-youth' => 'فريق الشباب U-19',
@@ -305,7 +403,7 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
         // Squad Switcher Dropdown (Interactive)
         Flexible(
           child: InkWell(
-            onTap: session.isLocked
+            onTap: (session.isLocked && !isMaster)
                 ? null
                 : () => _showSquadSelectorSheet(context, session),
             borderRadius: BorderRadius.circular(12),
@@ -330,7 +428,9 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
                     width: 8,
                     height: 8,
                     decoration: BoxDecoration(
-                      color: session.isLocked ? AppColors.session : AppColors.present,
+                      color: session.isLocked && !isMaster
+                          ? AppColors.session
+                          : AppColors.present,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -365,7 +465,7 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
                       ),
                     ),
                   ),
-                  if (!session.isLocked) ...[
+                  if (!session.isLocked || isMaster) ...[
                     const SizedBox(width: 4),
                     const Icon(
                       LucideIcons.chevronDown,
@@ -384,25 +484,42 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
             color: session.isLocked
-                ? AppColors.sessionBackground
+                ? (isMaster
+                    ? const Color(0xFFEFF6FF)
+                    : AppColors.sessionBackground)
                 : AppColors.presentBackground,
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: session.isLocked
+                  ? (isMaster ? const Color(0xFF93C5FD) : Colors.transparent)
+                  : Colors.transparent,
+            ),
           ),
           child: Row(
             children: [
               Icon(
-                session.isLocked ? LucideIcons.lock : LucideIcons.radio,
+                session.isLocked
+                    ? (isMaster ? LucideIcons.shieldCheck : LucideIcons.lock)
+                    : LucideIcons.radio,
                 size: 14,
-                color: session.isLocked ? AppColors.session : AppColors.present,
+                color: session.isLocked
+                    ? (isMaster ? const Color(0xFF1D4ED8) : AppColors.session)
+                    : AppColors.present,
               ),
               const SizedBox(width: 6),
               Text(
-                session.isLocked ? 'مقفل إدارياً' : 'حافظة مفتوحة للرصد',
+                session.isLocked
+                    ? (isMaster
+                        ? 'مرحّل (متاح التعديل الإداري)'
+                        : 'مقفل إدارياً')
+                    : 'حافظة مفتوحة للرصد',
                 style: TextStyle(
                   fontFamily: 'Cairo',
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
-                  color: session.isLocked ? AppColors.session : AppColors.present,
+                  color: session.isLocked
+                      ? (isMaster ? const Color(0xFF1E40AF) : AppColors.session)
+                      : AppColors.present,
                 ),
               ),
             ],
@@ -627,6 +744,7 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
   }
 
   Widget _buildStickyActionBar(AttendanceSession session) {
+    final isMaster = AppRoleScope.isMaster(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: const BoxDecoration(
@@ -713,7 +831,9 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
                   children: [
                     Text(
                       session.isLocked
-                          ? 'مراجعة كشف التمرين المقفل إدارياً'
+                          ? (isMaster
+                              ? 'مراجعة واعتماد التعديلات الإدارية'
+                              : 'مراجعة كشف التمرين المقفل إدارياً')
                           : 'إنهاء ومراجعة الكشف',
                       style: const TextStyle(
                         fontFamily: 'Cairo',

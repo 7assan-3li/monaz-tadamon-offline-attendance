@@ -171,6 +171,71 @@ void main() {
       await db.close();
     },
   );
+
+  test(
+    'allows admin override write on dispatched and locked session when allowAdminOverride is true',
+    () async {
+      final db = AppDatabase.forTesting(NativeDatabase.memory());
+      final now = DateTime.utc(2026, 10, 7);
+      await db.into(db.teams).insert(
+            TeamsCompanion.insert(
+              id: 'team-first',
+              name: 'الفريق الأول',
+              category: 'الفريق الأول',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+      await db.into(db.players).insert(
+            PlayersCompanion.insert(
+              id: 'p1',
+              name: 'سالم مبارك',
+              teamId: 'team-first',
+              jerseyNumber: const Value(10),
+              joinDate: now,
+              updatedAt: now,
+            ),
+          );
+      final dao = AttendanceDao(db, _Guard());
+      final session = await dao.startToday('team-first');
+      final dispatched = await dao.dispatch(session.sessionUuid);
+      expect(dispatched.isLocked, isTrue);
+
+      // Ordinary update should throw LockedAttendanceSessionException
+      await expectLater(
+        dao.updateStatus(
+          session.sessionUuid,
+          'p1',
+          PlayerAttendanceStatus.present,
+        ),
+        throwsA(isA<LockedAttendanceSessionException>()),
+      );
+
+      // Admin override should succeed
+      final updatedByAdmin = await dao.updateStatus(
+        session.sessionUuid,
+        'p1',
+        PlayerAttendanceStatus.excused,
+        allowAdminOverride: true,
+      );
+      expect(
+        updatedByAdmin.items.firstWhere((i) => i.playerId == 'p1').status,
+        PlayerAttendanceStatus.excused,
+      );
+
+      // Admin mark all present should succeed
+      final allPresent = await dao.markAllPresent(
+        session.sessionUuid,
+        allowAdminOverride: true,
+      );
+      expect(
+        allPresent.items.firstWhere((i) => i.playerId == 'p1').status,
+        PlayerAttendanceStatus.present,
+      );
+
+      await db.close();
+    },
+  );
 }
 
 class _Guard implements AttendanceWriteGuard {
