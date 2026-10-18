@@ -15,10 +15,12 @@ class SettingsRepositoryImpl implements SettingsRepository {
 
   static const _exportPathKey = 'reports_export_path';
   static const _autoShareKey = 'reports_auto_share_on_export';
+  static const _pinLockEnabledKey = 'app_pin_lock_enabled';
 
   // In-memory fallback if no persistent SecureValueStore is supplied
   String? _fallbackExportPath;
   bool _fallbackAutoShare = true;
+  bool _fallbackPinLockEnabled = true;
 
   @override
   Future<ClubProfileSettings> read() async {
@@ -28,6 +30,7 @@ class SettingsRepositoryImpl implements SettingsRepository {
 
     String? exportPath;
     bool autoShare = true;
+    bool pinLockEnabled = true;
 
     if (_secureStore != null) {
       exportPath = await _secureStore.read(_exportPathKey);
@@ -35,15 +38,24 @@ class SettingsRepositoryImpl implements SettingsRepository {
       if (autoShareRaw != null) {
         autoShare = autoShareRaw == 'true';
       }
+      final pinLockRaw = await _secureStore.read(_pinLockEnabledKey);
+      if (pinLockRaw != null) {
+        pinLockEnabled = pinLockRaw == 'true';
+      } else {
+        pinLockEnabled = row?.pinCodeHash != null;
+      }
     } else {
       exportPath = _fallbackExportPath;
       autoShare = _fallbackAutoShare;
+      pinLockEnabled = _fallbackPinLockEnabled;
     }
 
     if (row == null) {
       return ClubProfileSettings(
         clubName: 'نادي تضامن حضرموت',
         season: 'الموسم الرياضي',
+        hasPin: false,
+        isPinLockEnabled: pinLockEnabled,
         reportsExportPath: exportPath,
         autoShareOnExport: autoShare,
       );
@@ -54,6 +66,7 @@ class SettingsRepositoryImpl implements SettingsRepository {
       adminName: row.adminName,
       managerName: row.managerName,
       hasPin: row.pinCodeHash != null,
+      isPinLockEnabled: pinLockEnabled,
       reportsExportPath: exportPath,
       autoShareOnExport: autoShare,
     );
@@ -82,9 +95,11 @@ class SettingsRepositoryImpl implements SettingsRepository {
         await _secureStore.write(_exportPathKey, settings.reportsExportPath!.trim());
       }
       await _secureStore.write(_autoShareKey, settings.autoShareOnExport.toString());
+      await _secureStore.write(_pinLockEnabledKey, settings.isPinLockEnabled.toString());
     } else {
       _fallbackExportPath = settings.reportsExportPath?.trim();
       _fallbackAutoShare = settings.autoShareOnExport;
+      _fallbackPinLockEnabled = settings.isPinLockEnabled;
     }
   }
 
@@ -92,10 +107,34 @@ class SettingsRepositoryImpl implements SettingsRepository {
   Future<void> setPin(String pin) async {
     final hash = await _pinSecurity.hash(pin);
     final settings = await read();
-    await save(settings);
+    await save(settings.copyWith(isPinLockEnabled: true));
     await (_database.update(_database.clubSettings)
           ..where((t) => t.id.equals(1)))
         .write(ClubSettingsCompanion(pinCodeHash: Value(hash)));
+    await setPinLockEnabled(true);
+  }
+
+  @override
+  Future<void> removePin() async {
+    await (_database.update(_database.clubSettings)
+          ..where((t) => t.id.equals(1)))
+        .write(const ClubSettingsCompanion(pinCodeHash: Value(null)));
+    await setPinLockEnabled(false);
+  }
+
+  @override
+  Future<bool> isPinLockEnabled() async {
+    final settings = await read();
+    return settings.isPinLockEnabled;
+  }
+
+  @override
+  Future<void> setPinLockEnabled(bool enabled) async {
+    if (_secureStore != null) {
+      await _secureStore.write(_pinLockEnabledKey, enabled.toString());
+    } else {
+      _fallbackPinLockEnabled = enabled;
+    }
   }
 
   @override
@@ -103,7 +142,10 @@ class SettingsRepositoryImpl implements SettingsRepository {
     final row = await (_database.select(
       _database.clubSettings,
     )..where((t) => t.id.equals(1))).getSingleOrNull();
-    if (row?.pinCodeHash == null) return false;
+    if (row?.pinCodeHash == null) {
+      // Default founding PIN (1959) if custom PIN is not yet set
+      return pin == '1959';
+    }
     return _pinSecurity.verify(pin, row!.pinCodeHash!);
   }
 }

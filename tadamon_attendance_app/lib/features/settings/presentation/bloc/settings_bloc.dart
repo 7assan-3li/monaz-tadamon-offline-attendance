@@ -20,6 +20,15 @@ class PinChanged extends SettingsEvent {
   final String pin;
 }
 
+class PinLockToggled extends SettingsEvent {
+  const PinLockToggled(this.enabled);
+  final bool enabled;
+}
+
+class PinRemoved extends SettingsEvent {
+  const PinRemoved();
+}
+
 sealed class SettingsState {
   const SettingsState();
 }
@@ -55,6 +64,26 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       await _repository.setPin(event.pin);
       emit(
         SettingsReady(await _repository.read(), message: 'حُفظ رمز الحماية.'),
+      );
+    });
+    on<PinLockToggled>((event, emit) async {
+      await _repository.setPinLockEnabled(event.enabled);
+      emit(
+        SettingsReady(
+          await _repository.read(),
+          message: event.enabled
+              ? 'تم تفعيل قفل التطبيق برمز PIN.'
+              : 'تم تعطيل قفل التطبيق برمز PIN.',
+        ),
+      );
+    });
+    on<PinRemoved>((event, emit) async {
+      await _repository.removePin();
+      emit(
+        SettingsReady(
+          await _repository.read(),
+          message: 'تمت إزالة رمز الحماية (PIN).',
+        ),
       );
     });
   }

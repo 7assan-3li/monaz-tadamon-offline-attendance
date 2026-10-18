@@ -18,6 +18,8 @@ import 'package:tadamon_attendance_app/features/players/presentation/bloc/player
 import 'package:tadamon_attendance_app/features/players/presentation/bloc/players_event.dart';
 import 'package:tadamon_attendance_app/features/players/presentation/screens/players_list_screen.dart';
 import 'package:tadamon_attendance_app/features/settings/presentation/bloc/settings_bloc.dart';
+import 'package:tadamon_attendance_app/features/settings/domain/repositories/settings_repository.dart';
+import 'package:tadamon_attendance_app/features/settings/presentation/screens/app_pin_lock_screen.dart';
 import 'package:tadamon_attendance_app/features/settings/presentation/screens/club_settings_screen.dart';
 import 'package:tadamon_attendance_app/features/teams/presentation/bloc/teams_bloc.dart';
 import 'package:tadamon_attendance_app/features/attendance/presentation/bloc/attendance_bloc.dart';
@@ -105,6 +107,8 @@ class _AppBootstrapState extends State<AppBootstrap> {
   late ActivatedLicense? _license = widget.initialLicense;
   var _selectedIndex = 0;
   var _masterReady = false;
+  var _isUnlocked = false;
+  var _pinLockActive = false;
 
   @override
   void initState() {
@@ -114,7 +118,15 @@ class _AppBootstrapState extends State<AppBootstrap> {
 
   Future<void> _prepareMaster() async {
     await configureMasterDependencies();
-    if (mounted) setState(() => _masterReady = true);
+    final settingsRepo = serviceLocator<SettingsRepository>();
+    final isPinEnabled = await settingsRepo.isPinLockEnabled();
+    if (mounted) {
+      setState(() {
+        _masterReady = true;
+        _pinLockActive = isPinEnabled;
+        _isUnlocked = !isPinEnabled;
+      });
+    }
   }
 
   @override
@@ -141,7 +153,12 @@ class _AppBootstrapState extends State<AppBootstrap> {
       ActivatedDeviceRole.masterAdmin =>
         !_masterReady
             ? const Center(child: CircularProgressIndicator())
-            : MasterAdminAppShell(
+            : (_pinLockActive && !_isUnlocked)
+                ? AppPinLockScreen(
+                    settingsRepository: serviceLocator<SettingsRepository>(),
+                    onUnlocked: () => setState(() => _isUnlocked = true),
+                  )
+                : MasterAdminAppShell(
                 selectedIndex: _selectedIndex,
                 onDestinationSelected: (index) =>
                     setState(() => _selectedIndex = index),

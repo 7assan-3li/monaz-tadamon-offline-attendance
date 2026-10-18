@@ -293,25 +293,31 @@ class _SettingsContent extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
           decoration: BoxDecoration(
-            color: AppColors.presentBackground,
+            color: settings.isPinLockEnabled
+                ? AppColors.presentBackground
+                : const Color(0xFFF1F5F9),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                settings.hasPin ? LucideIcons.lock : LucideIcons.lockOpen,
+                settings.isPinLockEnabled ? LucideIcons.lock : LucideIcons.lockOpen,
                 size: 12,
-                color: AppColors.present,
+                color: settings.isPinLockEnabled
+                    ? AppColors.present
+                    : AppColors.textSecondary,
               ),
               const SizedBox(width: 4),
               Text(
-                settings.hasPin ? 'PIN مفعّل' : 'PIN غير مفعّل',
-                style: const TextStyle(
+                settings.isPinLockEnabled ? 'قفل PIN مفعّل' : 'قفل PIN معطّل',
+                style: TextStyle(
                   fontFamily: 'Cairo',
                   fontSize: 10.5,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.present,
+                  color: settings.isPinLockEnabled
+                      ? AppColors.present
+                      : AppColors.textSecondary,
                 ),
               ),
             ],
@@ -569,34 +575,108 @@ class _SettingsContent extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+          // Startup PIN Lock switch
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            activeThumbColor: AppColors.royalBlue,
+            title: const Text(
+              'قفل التطبيق برمز PIN عند البداية',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 12.5,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            subtitle: const Text(
+              'طلب رمز المرور فور فتح التطبيق لحماية كشوفات وبيانات النادي',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 10,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            value: settings.isPinLockEnabled,
+            onChanged: (val) async {
+              if (val && !settings.hasPin) {
+                // Prompt to set custom PIN
+                final pin = await showPinPadModal(context);
+                if (pin != null && context.mounted) {
+                  context.read<SettingsBloc>().add(PinChanged(pin));
+                }
+              } else {
+                context.read<SettingsBloc>().add(PinLockToggled(val));
+              }
+            },
+          ),
+          const Divider(height: 16, color: AppColors.borderSubtle),
           InkWell(
             onTap: () => _openPinPad(context),
             borderRadius: BorderRadius.circular(8),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 4),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
-                      Icon(LucideIcons.lock, size: 16, color: AppColors.royalBlue),
-                      SizedBox(width: 8),
-                      Text(
-                        'تغيير رمز المرور السريع (PIN)',
-                        style: TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
+                      const Icon(LucideIcons.keyRound, size: 16, color: AppColors.royalBlue),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'تغيير رمز المرور السريع (PIN)',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            settings.hasPin ? 'رمز مخصص ومحفوظ' : 'رمز التأسيس الافتراضي (1959)',
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 10,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  Icon(LucideIcons.chevronLeft, size: 16, color: AppColors.textSecondary),
+                  const Icon(LucideIcons.chevronLeft, size: 16, color: AppColors.textSecondary),
                 ],
               ),
             ),
           ),
+          if (settings.hasPin) ...[
+            const SizedBox(height: 6),
+            InkWell(
+              onTap: () => _confirmRemovePin(context),
+              borderRadius: BorderRadius.circular(8),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Icon(LucideIcons.trash2, size: 14, color: AppColors.unexcused),
+                    SizedBox(width: 6),
+                    Text(
+                      'استعادة الرمز الافتراضي (إزالة الرمز المخصص)',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 11,
+                        color: AppColors.unexcused,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1204,5 +1284,35 @@ class _SettingsContent extends StatelessWidget {
     if (pin != null && context.mounted) {
       context.read<SettingsBloc>().add(PinChanged(pin));
     }
+  }
+
+  void _confirmRemovePin(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'استعادة رمز المرور الافتراضي',
+          style: TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'هل تريد إزالة رمز المرور المخصص والعودة للرمز الافتراضي لنادي تضامن حضرموت؟',
+          style: TextStyle(fontFamily: 'Cairo', fontSize: 12),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('إلغاء', style: TextStyle(fontFamily: 'Cairo')),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.unexcused),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              context.read<SettingsBloc>().add(const PinRemoved());
+            },
+            child: const Text('تأكيد الاستعادة', style: TextStyle(fontFamily: 'Cairo', color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 }

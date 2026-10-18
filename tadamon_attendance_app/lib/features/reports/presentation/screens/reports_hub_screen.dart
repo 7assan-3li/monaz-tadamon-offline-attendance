@@ -31,7 +31,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
   String _selectedTeamId = 'team-first';
   int _selectedYear = 2026;
   int _selectedMonth = 10;
-  final String _selectedPeriod = 'all'; // 'all', 'morning', 'evening', 'extra'
+  String _selectedPeriod = 'all'; // 'all', 'morning', 'evening'
   DateTime? _customStartDate;
   DateTime? _customEndDate;
 
@@ -632,9 +632,13 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
       children: [
         // 1. ملخص حصص الفترة المحددة
         _buildSessionsSummaryCard(state, totalSessions),
+        const SizedBox(height: 12),
+
+        // 2. شريط فلترة الفترة والتواريخ في الشهر
+        _buildMonthSubFilterBar(),
         const SizedBox(height: 14),
 
-        // 2. عنوان القائمة مع العدد
+        // 3. عنوان القائمة مع العدد
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -657,11 +661,28 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                 ),
               ],
             ),
+            if (_selectedPeriod != 'all' || _customStartDate != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.royalBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'نتائج مفلترة',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.royalBlue,
+                  ),
+                ),
+              ),
           ],
         ),
         const SizedBox(height: 10),
 
-        // 3. بطاقات الحصص أو حالة الفراغ
+        // 4. بطاقات الحصص أو حالة الفراغ
         if (sessions.isEmpty)
           _buildEmptySessionsCard()
         else
@@ -677,6 +698,422 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
           ),
       ],
     );
+  }
+
+  Widget _buildMonthSubFilterBar() {
+    final hasActiveDateFilter = _customStartDate != null;
+    final hasActivePeriodFilter = _selectedPeriod != 'all';
+    final hasAnyFilter = hasActiveDateFilter || hasActivePeriodFilter;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: hasAnyFilter
+              ? AppColors.royalBlue.withValues(alpha: 0.4)
+              : const Color(0xFFE2E8F0),
+          width: hasAnyFilter ? 1.5 : 1,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Filter title & Reset button
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: AppColors.royalBlue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      LucideIcons.filter,
+                      size: 14,
+                      color: AppColors.royalBlue,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'فلترة تمارين شهر $_currentMonthName',
+                    style: const TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              if (hasAnyFilter)
+                InkWell(
+                  onTap: _clearAllFilters,
+                  borderRadius: BorderRadius.circular(6),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(LucideIcons.rotateCcw, size: 12, color: AppColors.royalBlue),
+                        SizedBox(width: 4),
+                        Text(
+                          'إلغاء الفلترة',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.royalBlue,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Period Chips Row: الكل | ☀️ صباحي | 🌙 مسائي
+          Row(
+            children: [
+              _buildPeriodChip(label: 'الكل', value: 'all', icon: LucideIcons.layers),
+              const SizedBox(width: 6),
+              _buildPeriodChip(label: 'صباحي', value: 'morning', icon: LucideIcons.sunMedium),
+              const SizedBox(width: 6),
+              _buildPeriodChip(label: 'مسائي', value: 'evening', icon: LucideIcons.moon),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Date Filter Button / Active Date Badge
+          InkWell(
+            onTap: () => _showDateFilterDialog(context),
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: hasActiveDateFilter
+                    ? AppColors.royalBlue.withValues(alpha: 0.08)
+                    : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: hasActiveDateFilter
+                      ? AppColors.royalBlue.withValues(alpha: 0.4)
+                      : const Color(0xFFCBD5E1),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    LucideIcons.calendarDays,
+                    size: 16,
+                    color: hasActiveDateFilter ? AppColors.royalBlue : AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      hasActiveDateFilter
+                          ? _buildDateFilterLabel()
+                          : 'البحث بيوم محدد أو نطاق أيام في الشهر...',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 11.5,
+                        fontWeight: hasActiveDateFilter ? FontWeight.bold : FontWeight.normal,
+                        color: hasActiveDateFilter ? AppColors.royalBlue : AppColors.textSecondary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (hasActiveDateFilter)
+                    GestureDetector(
+                      onTap: _clearDateFilter,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: AppColors.royalBlue.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          LucideIcons.x,
+                          size: 13,
+                          color: AppColors.royalBlue,
+                        ),
+                      ),
+                    )
+                  else
+                    const Icon(
+                      LucideIcons.chevronDown,
+                      size: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPeriodChip({
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
+    final isSelected = _selectedPeriod == value;
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          if (_selectedPeriod != value) {
+            setState(() => _selectedPeriod = value);
+            _loadReportsData();
+          }
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.royalBlue : const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isSelected ? AppColors.royalBlue : const Color(0xFFE2E8F0),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 13,
+                color: isSelected ? Colors.white : AppColors.textSecondary,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  color: isSelected ? Colors.white : AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _buildDateFilterLabel() {
+    if (_customStartDate == null) return '';
+    final start = _customStartDate!;
+    final end = _customEndDate;
+    if (end == null || (start.year == end.year && start.month == end.month && start.day == end.day)) {
+      return 'تاريخ محدد: ${start.day} ${_getMonthName(start.month)} ${start.year}';
+    }
+    return 'من ${start.day} إلى ${end.day} ${_getMonthName(start.month)} ${start.year}';
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+    ];
+    return months[(month - 1) % 12];
+  }
+
+  void _showDateFilterDialog(BuildContext context) {
+    final daysInMonth = DateTime(_selectedYear, _selectedMonth + 1, 0).day;
+    final firstDayOfMonth = DateTime(_selectedYear, _selectedMonth, 1);
+    final lastDayOfMonth = DateTime(_selectedYear, _selectedMonth, daysInMonth);
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppColors.royalBlue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(LucideIcons.calendar, size: 18, color: AppColors.royalBlue),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'تحديد تاريخ أو نطاق أيام في $_currentMonthName',
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  icon: const Icon(LucideIcons.x, size: 18),
+                ),
+              ],
+            ),
+            const Divider(height: 20),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(LucideIcons.calendarCheck, size: 18, color: AppColors.royalBlue),
+              ),
+              title: const Text(
+                'اختيار يوم محدد',
+                style: TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+              subtitle: const Text(
+                'عرض التمارين المنفذة في يوم تدريبي معين من الشهر',
+                style: TextStyle(fontFamily: 'Cairo', fontSize: 10.5, color: AppColors.textSecondary),
+              ),
+              trailing: const Icon(LucideIcons.chevronLeft, size: 16),
+              onTap: () async {
+                Navigator.of(ctx).pop();
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _customStartDate ?? firstDayOfMonth,
+                  firstDate: firstDayOfMonth,
+                  lastDate: lastDayOfMonth,
+                );
+                if (picked != null) {
+                  setState(() {
+                    _customStartDate = DateTime.utc(picked.year, picked.month, picked.day);
+                    _customEndDate = DateTime.utc(picked.year, picked.month, picked.day);
+                  });
+                  _loadReportsData();
+                }
+              },
+            ),
+            const SizedBox(height: 6),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(LucideIcons.calendarRange, size: 18, color: Color(0xFF16A34A)),
+              ),
+              title: const Text(
+                'اختيار نطاق أيام (من تاريخ إلى تاريخ)',
+                style: TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+              subtitle: const Text(
+                'فلترة تمارين أسبوع أو فترة معينة داخل الشهر',
+                style: TextStyle(fontFamily: 'Cairo', fontSize: 10.5, color: AppColors.textSecondary),
+              ),
+              trailing: const Icon(LucideIcons.chevronLeft, size: 16),
+              onTap: () async {
+                Navigator.of(ctx).pop();
+                final pickedRange = await showDateRangePicker(
+                  context: context,
+                  firstDate: firstDayOfMonth,
+                  lastDate: lastDayOfMonth,
+                  initialDateRange: _customStartDate != null && _customEndDate != null
+                      ? DateTimeRange(start: _customStartDate!, end: _customEndDate!)
+                      : DateTimeRange(start: firstDayOfMonth, end: lastDayOfMonth),
+                );
+                if (pickedRange != null) {
+                  setState(() {
+                    _customStartDate = DateTime.utc(
+                      pickedRange.start.year,
+                      pickedRange.start.month,
+                      pickedRange.start.day,
+                    );
+                    _customEndDate = DateTime.utc(
+                      pickedRange.end.year,
+                      pickedRange.end.month,
+                      pickedRange.end.day,
+                    );
+                  });
+                  _loadReportsData();
+                }
+              },
+            ),
+            if (_customStartDate != null) ...[
+              const Divider(height: 16),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(LucideIcons.rotateCcw, size: 18, color: AppColors.unexcused),
+                ),
+                title: const Text(
+                  'إلغاء الفلترة والعودة لكامل الشهر',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.unexcused,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _clearDateFilter();
+                },
+              ),
+            ],
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _clearDateFilter() {
+    setState(() {
+      _customStartDate = null;
+      _customEndDate = null;
+    });
+    _loadReportsData();
+  }
+
+  void _clearAllFilters() {
+    setState(() {
+      _selectedPeriod = 'all';
+      _customStartDate = null;
+      _customEndDate = null;
+    });
+    _loadReportsData();
   }
 
   Widget _buildSessionsSummaryCard(
@@ -899,6 +1336,8 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
   }
 
   Widget _buildEmptySessionsCard() {
+    final isFiltered = _selectedPeriod != 'all' || _customStartDate != null;
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
       decoration: BoxDecoration(
@@ -909,14 +1348,16 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
       child: Column(
         children: [
           Icon(
-            LucideIcons.calendarOff,
+            isFiltered ? LucideIcons.filterX : LucideIcons.calendarOff,
             size: 44,
             color: AppColors.royalBlue.withValues(alpha: 0.4),
           ),
           const SizedBox(height: 12),
-          const Text(
-            'لا توجد حصص تدريبية مسجلة في هذا الشهر',
-            style: TextStyle(
+          Text(
+            isFiltered
+                ? 'لا توجد تمارين تطابق الفلترة المحددة'
+                : 'لا توجد حصص تدريبية مسجلة في هذا الشهر',
+            style: const TextStyle(
               fontFamily: 'Cairo',
               fontSize: 14,
               fontWeight: FontWeight.bold,
@@ -924,15 +1365,37 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'اختر شهراً آخر من الأعلى أو ابدأ تحضير تمرين ميداني جديد للفئة.',
+          Text(
+            isFiltered
+                ? 'جرب اختيار فترة تدريبية أخرى أو تغيير نطاق التواريخ.'
+                : 'اختر شهراً آخر من الأعلى أو ابدأ تحضير تمرين ميداني جديد للفئة.',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontFamily: 'Cairo',
               fontSize: 11,
               color: AppColors.textSecondary,
             ),
           ),
+          if (isFiltered) ...[
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              onPressed: _clearAllFilters,
+              icon: const Icon(LucideIcons.rotateCcw, size: 14, color: AppColors.royalBlue),
+              label: const Text(
+                'عرض كافة تمارين الشهر',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.royalBlue,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: AppColors.royalBlue),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -2778,6 +3241,8 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                       setState(() {
                         _selectedYear = m['year'] as int;
                         _selectedMonth = m['month'] as int;
+                        _customStartDate = null;
+                        _customEndDate = null;
                       });
                       _loadReportsData();
                     },

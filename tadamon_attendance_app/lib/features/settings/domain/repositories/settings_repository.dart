@@ -5,4 +5,7 @@ abstract interface class SettingsRepository {
   Future<void> save(ClubProfileSettings settings);
   Future<void> setPin(String pin);
   Future<bool> verifyPin(String pin);
+  Future<void> removePin();
+  Future<bool> isPinLockEnabled();
+  Future<void> setPinLockEnabled(bool enabled);
 }

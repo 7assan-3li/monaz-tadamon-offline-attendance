@@ -5,6 +5,7 @@ class ClubProfileSettings {
     this.adminName,
     this.managerName,
     this.hasPin = false,
+    this.isPinLockEnabled = true,
     this.reportsExportPath,
     this.autoShareOnExport = true,
   });
@@ -14,6 +15,7 @@ class ClubProfileSettings {
   final String? adminName;
   final String? managerName;
   final bool hasPin;
+  final bool isPinLockEnabled;
   final String? reportsExportPath;
   final bool autoShareOnExport;
 
@@ -23,6 +25,7 @@ class ClubProfileSettings {
     String? adminName,
     String? managerName,
     bool? hasPin,
+    bool? isPinLockEnabled,
     String? reportsExportPath,
     bool? autoShareOnExport,
   }) {
@@ -32,6 +35,7 @@ class ClubProfileSettings {
       adminName: adminName ?? this.adminName,
       managerName: managerName ?? this.managerName,
       hasPin: hasPin ?? this.hasPin,
+      isPinLockEnabled: isPinLockEnabled ?? this.isPinLockEnabled,
       reportsExportPath: reportsExportPath ?? this.reportsExportPath,
       autoShareOnExport: autoShareOnExport ?? this.autoShareOnExport,
     );

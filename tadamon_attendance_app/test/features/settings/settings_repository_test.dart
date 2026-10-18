@@ -27,6 +27,19 @@ void main() {
     expect(settings.autoShareOnExport, isFalse);
     expect(await repository.verifyPin('1959'), isTrue);
     expect(await repository.verifyPin('0000'), isFalse);
+    expect(await repository.isPinLockEnabled(), isTrue);
+
+    await repository.setPinLockEnabled(false);
+    expect(await repository.isPinLockEnabled(), isFalse);
+
+    await repository.removePin();
+    final settingsAfterRemoval = await repository.read();
+    expect(settingsAfterRemoval.hasPin, isFalse);
+    expect(await repository.isPinLockEnabled(), isFalse);
+    // When no custom PIN is set, default PIN 1959 is accepted
+    expect(await repository.verifyPin('1959'), isTrue);
+    expect(await repository.verifyPin('1234'), isFalse);
+
     await database.close();
   });
 }
