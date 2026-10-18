@@ -1463,10 +1463,13 @@ class _PlayersListScreenState extends State<PlayersListScreen> {
   Future<void> _edit(BuildContext context, {ClubPlayer? player}) async {
     final defaultTeam =
         _selectedTeamFilter != 'all' ? _selectedTeamFilter : 'team-first';
+    final state = context.read<PlayersBloc>().state;
+    final allPlayers = state is PlayersReady ? state.players : <ClubPlayer>[];
     final result = await showAddEditPlayerModal(
       context,
       player: player,
       defaultTeamId: defaultTeam,
+      existingPlayers: allPlayers,
     );
     if (result == null || !context.mounted) return;
     context.read<PlayersBloc>().add(

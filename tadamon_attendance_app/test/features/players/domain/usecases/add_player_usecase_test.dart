@@ -19,6 +19,24 @@ void main() {
     );
     expect(() => useCase(_player(jersey: 100)), throwsFormatException);
   });
+
+  test('rejects duplicate jersey number in the same team', () async {
+    final repository = _MemoryPlayersRepository();
+    final firstPlayer = _player(name: 'سالم مبارك', jersey: 10);
+    repository.players.add(firstPlayer);
+
+    final useCase = AddPlayerUseCase(repository);
+    final secondPlayer = ClubPlayer(
+      id: 'player-2',
+      name: 'علي العمودي',
+      teamId: 'team-1',
+      jerseyNumber: 10,
+      joinDate: DateTime.utc(2026, 10, 7),
+      updatedAt: DateTime.utc(2026, 10, 7),
+    );
+
+    expect(() => useCase(secondPlayer), throwsFormatException);
+  });
 }
 
 ClubPlayer _player({String name = 'سالم مبارك', int? jersey = 10}) {

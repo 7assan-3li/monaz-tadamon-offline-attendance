@@ -8,6 +8,7 @@ Future<ClubPlayer?> showAddEditPlayerModal(
   BuildContext context, {
   ClubPlayer? player,
   String defaultTeamId = 'team-first',
+  List<ClubPlayer> existingPlayers = const [],
 }) {
   return showModalBottomSheet<ClubPlayer>(
     context: context,
@@ -17,14 +18,20 @@ Future<ClubPlayer?> showAddEditPlayerModal(
     builder: (_) => _PlayerForm(
       player: player,
       defaultTeamId: defaultTeamId,
+      existingPlayers: existingPlayers,
     ),
   );
 }
 
 class _PlayerForm extends StatefulWidget {
-  const _PlayerForm({this.player, this.defaultTeamId = 'team-first'});
+  const _PlayerForm({
+    this.player,
+    this.defaultTeamId = 'team-first',
+    this.existingPlayers = const [],
+  });
   final ClubPlayer? player;
   final String defaultTeamId;
+  final List<ClubPlayer> existingPlayers;
 
   @override
   State<_PlayerForm> createState() => _PlayerFormState();
@@ -328,15 +335,52 @@ class _PlayerFormState extends State<_PlayerForm> {
     }
 
     final numberText = _numberController.text.trim();
-    final jerseyNumber = int.tryParse(numberText);
-    if (jerseyNumber != null && (jerseyNumber < 1 || jerseyNumber > 99)) {
+    if (numberText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'رقم القميص يجب أن يكون بين 1 و 99.',
+            'يرجى إدخال رقم القميص للاعب (مطلوب لتمييز كل لاعب).',
             style: TextStyle(fontFamily: 'Cairo'),
           ),
           backgroundColor: AppColors.unexcused,
+        ),
+      );
+      return;
+    }
+
+    final jerseyNumber = int.tryParse(numberText);
+    if (jerseyNumber == null || jerseyNumber < 1 || jerseyNumber > 99) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'رقم القميص يجب أن يكون رقماً صحيحاً بين 1 و 99.',
+            style: TextStyle(fontFamily: 'Cairo'),
+          ),
+          backgroundColor: AppColors.unexcused,
+        ),
+      );
+      return;
+    }
+
+    // Uniqueness validation per team
+    final conflictingPlayer = widget.existingPlayers.cast<ClubPlayer?>().firstWhere(
+          (p) =>
+              p != null &&
+              p.id != widget.player?.id &&
+              p.teamId == _selectedTeamId &&
+              p.jerseyNumber == jerseyNumber,
+          orElse: () => null,
+        );
+
+    if (conflictingPlayer != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'رقم القميص ($jerseyNumber) مسجل بالفعل للاعب "${conflictingPlayer.name}" في هذا الفريق. يجب أن يكون لكل لاعب رقم فريد.',
+            style: const TextStyle(fontFamily: 'Cairo'),
+          ),
+          backgroundColor: AppColors.unexcused,
+          duration: const Duration(seconds: 4),
         ),
       );
       return;
