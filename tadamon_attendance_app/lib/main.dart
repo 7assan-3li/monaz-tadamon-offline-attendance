@@ -109,6 +109,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
   var _masterReady = false;
   var _isUnlocked = false;
   var _pinLockActive = false;
+  var _isTemporaryFieldMode = false;
 
   @override
   void initState() {
@@ -158,57 +159,77 @@ class _AppBootstrapState extends State<AppBootstrap> {
                     settingsRepository: serviceLocator<SettingsRepository>(),
                     onUnlocked: () => setState(() => _isUnlocked = true),
                   )
-                : MasterAdminAppShell(
-                selectedIndex: _selectedIndex,
-                onDestinationSelected: (index) =>
-                    setState(() => _selectedIndex = index),
-                child: switch (_selectedIndex) {
-                  1 => MultiBlocProvider(
-                    providers: [
-                      BlocProvider(
-                        create: (_) => serviceLocator<AttendanceBloc>()
-                          ..add(StartTodaySessionEvent(activeTeam.teamId)),
+                : _isTemporaryFieldMode
+                    ? FieldAttendanceAppShell(
+                        onExitFieldMode: () =>
+                            setState(() => _isTemporaryFieldMode = false),
+                        child: MultiBlocProvider(
+                          providers: [
+                            BlocProvider(
+                              create: (_) => serviceLocator<AttendanceBloc>()
+                                ..add(StartTodaySessionEvent(activeTeam.teamId)),
+                            ),
+                          ],
+                          child: const FieldAttendanceFlow(
+                            initialPage: 0,
+                            showBottomNav: false,
+                          ),
+                        ),
+                      )
+                    : MasterAdminAppShell(
+                        selectedIndex: _selectedIndex,
+                        onDestinationSelected: (index) =>
+                            setState(() => _selectedIndex = index),
+                        child: switch (_selectedIndex) {
+                          1 => MultiBlocProvider(
+                            providers: [
+                              BlocProvider(
+                                create: (_) => serviceLocator<AttendanceBloc>()
+                                  ..add(StartTodaySessionEvent(activeTeam.teamId)),
+                              ),
+                            ],
+                            child: const FieldAttendanceFlow(
+                              initialPage: 1,
+                              showBottomNav: false,
+                            ),
+                          ),
+                          2 => BlocProvider(
+                            create: (_) =>
+                                serviceLocator<PlayersBloc>()
+                                  ..add(const PlayersRequested()),
+                            child: const PlayersListScreen(),
+                          ),
+                          3 => BlocProvider(
+                            create: (_) => serviceLocator<ReportsBloc>(),
+                            child: ReportsHubScreen(
+                              onNavigateTab: (index) =>
+                                  setState(() => _selectedIndex = index),
+                            ),
+                          ),
+                          4 => MultiBlocProvider(
+                            providers: [
+                              BlocProvider(
+                                create: (_) =>
+                                    serviceLocator<SettingsBloc>()
+                                      ..add(const SettingsRequested()),
+                              ),
+                              BlocProvider(
+                                create: (_) =>
+                                    serviceLocator<TeamsBloc>()
+                                      ..add(const TeamsRequested()),
+                              ),
+                            ],
+                            child: ClubSettingsScreen(
+                              onSwitchToFieldMode: () => setState(
+                                  () => _isTemporaryFieldMode = true),
+                            ),
+                          ),
+                          _ => DesignSystemGalleryScreen(
+                            onNavigateTab: (index) =>
+                                setState(() => _selectedIndex = index),
+                          ),
+                        },
                       ),
-                    ],
-                    child: const FieldAttendanceFlow(
-                      initialPage: 1,
-                      showBottomNav: false,
-                    ),
-                  ),
-                  2 => BlocProvider(
-                    create: (_) =>
-                        serviceLocator<PlayersBloc>()
-                          ..add(const PlayersRequested()),
-                    child: const PlayersListScreen(),
-                  ),
-                  3 => BlocProvider(
-                    create: (_) => serviceLocator<ReportsBloc>(),
-                    child: ReportsHubScreen(
-                      onNavigateTab: (index) =>
-                          setState(() => _selectedIndex = index),
-                    ),
-                  ),
-                  4 => MultiBlocProvider(
-                    providers: [
-                      BlocProvider(
-                        create: (_) =>
-                            serviceLocator<SettingsBloc>()
-                              ..add(const SettingsRequested()),
-                      ),
-                      BlocProvider(
-                        create: (_) =>
-                            serviceLocator<TeamsBloc>()
-                              ..add(const TeamsRequested()),
-                      ),
-                    ],
-                    child: const ClubSettingsScreen(),
-                  ),
-                  _ => DesignSystemGalleryScreen(
-                    onNavigateTab: (index) =>
-                        setState(() => _selectedIndex = index),
-                  ),
-                },
-              ),
       ActivatedDeviceRole.fieldAttendance => FieldAttendanceAppShell(
         child: BlocProvider(
           create: (_) => serviceLocator<AttendanceBloc>(),

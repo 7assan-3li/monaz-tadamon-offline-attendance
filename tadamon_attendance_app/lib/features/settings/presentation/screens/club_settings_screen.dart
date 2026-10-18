@@ -13,7 +13,9 @@ import 'package:tadamon_attendance_app/features/settings/presentation/widgets/pi
 import 'package:tadamon_attendance_app/features/teams/presentation/screens/teams_screen.dart';
 
 class ClubSettingsScreen extends StatelessWidget {
-  const ClubSettingsScreen({super.key});
+  const ClubSettingsScreen({this.onSwitchToFieldMode, super.key});
+
+  final VoidCallback? onSwitchToFieldMode;
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +60,10 @@ class ClubSettingsScreen extends StatelessWidget {
                 ),
               ),
             ),
-          SettingsReady(:final settings) => _SettingsContent(settings: settings),
+          SettingsReady(:final settings) => _SettingsContent(
+              settings: settings,
+              onSwitchToFieldMode: onSwitchToFieldMode,
+            ),
         },
       ),
     );
@@ -175,9 +180,13 @@ class ClubSettingsScreen extends StatelessWidget {
 }
 
 class _SettingsContent extends StatelessWidget {
-  const _SettingsContent({required this.settings});
+  const _SettingsContent({
+    required this.settings,
+    this.onSwitchToFieldMode,
+  });
 
   final ClubProfileSettings settings;
+  final VoidCallback? onSwitchToFieldMode;
 
   @override
   Widget build(BuildContext context) {
@@ -185,6 +194,14 @@ class _SettingsContent extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       children: [
         _buildScreenHeader(context),
+        const SizedBox(height: 16),
+        _buildSectionHeader(
+          icon: LucideIcons.smartphone,
+          title: 'صلاحيات ووضع تشغيل الجهاز',
+          iconColor: const Color(0xFF2563EB),
+        ),
+        const SizedBox(height: 8),
+        _buildFieldModeSwitchCard(context),
         const SizedBox(height: 16),
         _buildSectionHeader(
           icon: LucideIcons.building2,
@@ -324,6 +341,161 @@ class _SettingsContent extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildFieldModeSwitchCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  LucideIcons.smartphone,
+                  size: 20,
+                  color: AppColors.royalBlue,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'الوضع الحالي: جهاز الإدارة (Master Admin)',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      'صلاحيات كاملة للتحكم بالكشوف والتقارير والإعدادات',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.borderSubtle),
+            ),
+            child: const Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  LucideIcons.info,
+                  size: 16,
+                  color: Color(0xFF0284C7),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'يمكنك تحويل هذا الهاتف مؤقتاً إلى وضع المحضر الميداني لتسليمه للمحضر أو تجربة الرصد فقط. سيتم إخفاء الإعدادات واللاعبين والتقارير، ولا يمكن العودة إلا برمز PIN الخاص بالإدارة.',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 11,
+                      color: Color(0xFF334155),
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                showDialog<void>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text(
+                      'تحويل إلى وضع المحضر الميداني؟',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    content: const Text(
+                      'سيتحول التطبيق فوراً إلى واجهة التحضير والرصد الميداني فقط مع عزل الإعدادات والتقارير.\n\nللرجوع إلى وضع الإدارة، سيتطلب إدخال رمز PIN.',
+                      style: TextStyle(fontFamily: 'Cairo', fontSize: 13),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('إلغاء',
+                            style: TextStyle(fontFamily: 'Cairo')),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.royalBlue,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          onSwitchToFieldMode?.call();
+                        },
+                        child: const Text('تأكيد التحويل',
+                            style: TextStyle(fontFamily: 'Cairo')),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              icon: const Icon(LucideIcons.arrowRightLeft, size: 16),
+              label: const Text(
+                'التبديل إلى وضع المحضر الميداني (Field Mode)',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.royalBlue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
