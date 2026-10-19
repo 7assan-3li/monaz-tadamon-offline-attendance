@@ -11,6 +11,8 @@ import 'package:tadamon_attendance_app/features/attendance/presentation/widgets/
 import 'package:tadamon_attendance_app/features/attendance/presentation/widgets/one_touch_present_button.dart';
 import 'package:tadamon_attendance_app/core/di/service_locator.dart';
 import 'package:tadamon_attendance_app/core/presentation/app_role_scope.dart';
+import 'package:tadamon_attendance_app/core/widgets/club_logo_widget.dart';
+import 'package:tadamon_attendance_app/core/theme/club_theme_service.dart';
 import 'package:tadamon_attendance_app/features/teams/presentation/bloc/active_team_cubit.dart';
 
 class QuickAttendanceScreen extends StatefulWidget {
@@ -91,11 +93,8 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   children: [
                     const SizedBox(height: 10),
-                    if (session.isLocked) ...[
-                      if (isMaster)
-                        _buildAdminEditBanner()
-                      else
-                        const LockedSessionBanner(),
+                    if (session.isLocked && !isMaster) ...[
+                      const LockedSessionBanner(),
                       const SizedBox(height: 12),
                     ],
 
@@ -184,12 +183,14 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
+    final isMaster = AppRoleScope.isMaster(context);
     return AppBar(
       elevation: 0,
-      backgroundColor: AppColors.royalBlue,
+      backgroundColor: ClubThemeService.instance.currentPrimaryColor,
       titleSpacing: 12,
       automaticallyImplyLeading: false,
       title: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           if (widget.onBack != null || Navigator.of(context).canPop()) ...[
             IconButton(
@@ -208,67 +209,75 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Image.asset(
-              'assets/images/main_logo.png',
-              width: 30,
-              height: 32,
+            child: const ClubLogoWidget(
+              width: 28,
+              height: 30,
               fit: BoxFit.contain,
-              semanticLabel: 'شعار نادي تضامن حضرموت',
             ),
           ),
           const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    const Text(
-                      'تضامن حضرموت',
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 5,
-                        vertical: 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text(
-                        'المعتمد',
-                        style: TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF38BDF8),
-                        ),
-                      ),
-                    ),
-                  ],
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'تحضير تمرين اليوم',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
-                const Text(
-                  'تحضير تمرين اليوم',
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 10,
-                    color: Color(0xFF93C5FD),
-                  ),
+              ),
+              Text(
+                'رصد الحضور والجاهزية الميدانية',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 10,
+                  color: Color(0xFF93C5FD),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
       actions: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          margin: const EdgeInsetsDirectional.only(end: 4),
+          decoration: BoxDecoration(
+            color: isMaster
+                ? Colors.white.withValues(alpha: 0.18)
+                : const Color(0xFFF59E0B).withValues(alpha: 0.22),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isMaster
+                  ? Colors.white.withValues(alpha: 0.4)
+                  : const Color(0xFFFCD34D).withValues(alpha: 0.7),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isMaster ? LucideIcons.shieldCheck : LucideIcons.clipboardCheck,
+                size: 13,
+                color: isMaster ? Colors.white : const Color(0xFFFEF08A),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                isMaster ? 'جهاز الإدارة' : 'جهاز المحضر',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: isMaster ? Colors.white : const Color(0xFFFEF08A),
+                ),
+              ),
+            ],
+          ),
+        ),
         IconButton(
           icon: const Icon(
             LucideIcons.bell,
@@ -299,95 +308,6 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
       ],
     );
   }
-
-  Widget _buildAdminEditBanner() => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(
-        colors: [Color(0xFF0F172A), Color(0xFF1E3A8A)],
-        begin: Alignment.topRight,
-        end: Alignment.bottomLeft,
-      ),
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: const Color(0xFF3B82F6).withValues(alpha: 0.5),
-        width: 1.2,
-      ),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x18000000),
-          blurRadius: 6,
-          offset: Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(7),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF59E0B).withValues(alpha: 0.2),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
-            ),
-          ),
-          child: const Icon(LucideIcons.crown, size: 18, color: Color(0xFFFBBF24)),
-        ),
-        const SizedBox(width: 10),
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    'كشف مرحّل - صلاحية التعديل الإداري (الإدارة العامة)',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(width: 6),
-                  Icon(LucideIcons.badgeCheck, size: 14, color: Color(0xFF38BDF8)),
-                ],
-              ),
-              SizedBox(height: 1),
-              Text(
-                'بصفتك إدارة النادي، يمكنك تعديل حالات الحضور الميدانية واعتمادها رسمياً.',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 10.5,
-                  color: Color(0xFFBFDBFE),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 6),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: const Color(0xFF10B981).withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: const Color(0xFF34D399), width: 0.8),
-          ),
-          child: const Text(
-            'تعديل متاح',
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFFA7F3D0),
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
 
   Widget _buildSquadBar(AttendanceSession session, bool isMaster) {
     final currentSquadName = switch (session.teamId) {

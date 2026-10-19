@@ -100,6 +100,7 @@ class MyApp extends StatelessWidget {
         valueListenable: ClubThemeService.instance.primaryColorNotifier,
         builder: (context, primaryColor, _) {
           return MaterialApp(
+            key: ValueKey('tadamon_app_${primaryColor.toARGB32()}'),
             title: 'تحضير ${ClubThemeService.instance.currentClubName}',
             theme: AppTheme.buildTheme(primaryColor),
             builder: (context, child) => Directionality(
@@ -189,58 +190,56 @@ class _AppBootstrapState extends State<AppBootstrap> {
 
     return AppRoleScope(
       isMasterAdmin: isEffectiveMaster,
-      child: MasterAdminAppShell(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) =>
-            setState(() => _selectedIndex = index),
-        child: switch (_selectedIndex) {
-          1 => MultiBlocProvider(
-            providers: [
-              BlocProvider(
-                create: (_) => serviceLocator<AttendanceBloc>()
-                  ..add(StartTodaySessionEvent(activeTeam.teamId)),
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider<TeamsBloc>.value(
+            value: serviceLocator<TeamsBloc>()..add(const TeamsRequested()),
+          ),
+          BlocProvider<PlayersBloc>.value(
+            value: serviceLocator<PlayersBloc>()..add(const PlayersRequested()),
+          ),
+        ],
+        child: MasterAdminAppShell(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: (index) =>
+              setState(() => _selectedIndex = index),
+          child: switch (_selectedIndex) {
+            1 => MultiBlocProvider(
+              providers: [
+                BlocProvider(
+                  create: (_) => serviceLocator<AttendanceBloc>()
+                    ..add(StartTodaySessionEvent(activeTeam.teamId)),
+                ),
+              ],
+              child: const FieldAttendanceFlow(
+                initialPage: 1,
+                showBottomNav: false,
               ),
-            ],
-            child: const FieldAttendanceFlow(
-              initialPage: 1,
-              showBottomNav: false,
             ),
-          ),
-          2 => BlocProvider(
-            create: (_) =>
-                serviceLocator<PlayersBloc>()..add(const PlayersRequested()),
-            child: const PlayersListScreen(),
-          ),
-          3 => BlocProvider(
-            create: (_) => serviceLocator<ReportsBloc>(),
-            child: ReportsHubScreen(
+            2 => const PlayersListScreen(),
+            3 => BlocProvider(
+              create: (_) => serviceLocator<ReportsBloc>(),
+              child: ReportsHubScreen(
+                onNavigateTab: (index) =>
+                    setState(() => _selectedIndex = index),
+              ),
+            ),
+            4 => BlocProvider(
+              create: (_) =>
+                  serviceLocator<SettingsBloc>()..add(const SettingsRequested()),
+              child: ClubSettingsScreen(
+                onSwitchToFieldMode: !isFieldAccount
+                    ? () => setState(
+                        () => _isTemporaryFieldMode = !_isTemporaryFieldMode)
+                    : null,
+              ),
+            ),
+            _ => DesignSystemGalleryScreen(
               onNavigateTab: (index) =>
                   setState(() => _selectedIndex = index),
             ),
-          ),
-          4 => MultiBlocProvider(
-            providers: [
-              BlocProvider(
-                create: (_) =>
-                    serviceLocator<SettingsBloc>()..add(const SettingsRequested()),
-              ),
-              BlocProvider(
-                create: (_) =>
-                    serviceLocator<TeamsBloc>()..add(const TeamsRequested()),
-              ),
-            ],
-            child: ClubSettingsScreen(
-              onSwitchToFieldMode: !isFieldAccount
-                  ? () => setState(
-                      () => _isTemporaryFieldMode = !_isTemporaryFieldMode)
-                  : null,
-            ),
-          ),
-          _ => DesignSystemGalleryScreen(
-            onNavigateTab: (index) =>
-                setState(() => _selectedIndex = index),
-          ),
-        },
+          },
+        ),
       ),
     );
   }

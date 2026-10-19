@@ -161,20 +161,23 @@ void main() {
     await tester.tap(find.text('فريق الشباب (U-19)'));
     await tester.pumpAndSettle();
 
-    // 7. Test Segmented Control Switcher to Tab 1 (Admin Summary)
+    // 7. Test Segmented Control Switcher to Tab 2 (Admin Summary)
     await tester.tap(find.text('الخلاصة الإدارية'));
     await tester.pumpAndSettle();
     expect(find.text('خلاصة حضور وانضباط اللاعبين'), findsOneWidget);
 
-    // 8. Test Export Actions (PDF and Excel)
-    final exportBtnFinder = find.text('تصدير كشف الجداول (Excel XLSX)');
-    await tester.scrollUntilVisible(
-      exportBtnFinder,
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('تصدير خلاصة الإداري (PDF الرسمية)'), findsOneWidget);
-    await tester.tap(exportBtnFinder);
+    // 8. Test Export Action in Admin Summary Tab (Top Button)
+    final pdfExportBtn = find.text('تصدير خلاصة الإداري المعتمدة (PDF)');
+    expect(pdfExportBtn, findsOneWidget);
+    await tester.tap(pdfExportBtn);
+    await tester.pumpAndSettle();
+
+    // 9. Test Switch to Monthly Attendance Sheet and Excel Export
+    await tester.tap(find.text('كشف الحضور الشهري'));
+    await tester.pumpAndSettle();
+    final excelExportBtn = find.text('تصدير كشف الجداول (Excel)');
+    expect(excelExportBtn, findsOneWidget);
+    await tester.tap(excelExportBtn);
     await tester.pumpAndSettle();
   });
 }

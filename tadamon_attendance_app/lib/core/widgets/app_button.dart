@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:tadamon_attendance_app/core/constants/app_colors.dart';
 
+import 'package:tadamon_attendance_app/core/theme/club_theme_service.dart';
+
 enum AppButtonVariant { primary, secondary, destructive }
 
 extension AppButtonVariantStyle on AppButtonVariant {
   Color get backgroundColor => switch (this) {
-    AppButtonVariant.primary => AppColors.royalBlue,
+    AppButtonVariant.primary => ClubThemeService.instance.currentPrimaryColor,
     AppButtonVariant.secondary => AppColors.surface,
     AppButtonVariant.destructive => AppColors.unexcused,
   };

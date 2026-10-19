@@ -143,15 +143,13 @@ void main() {
 
     // 1. Verify Tab 0 is selected by default and displays saved sessions
     expect(find.text('سجل الحصص'), findsOneWidget);
-    expect(find.text('ملخص حصص الفترة المحددة'), findsOneWidget);
     expect(find.text('الحصص التدريبية المسجلة (2)'), findsOneWidget);
 
-    // Verify Month Filter Bar
-    expect(find.text('فلترة تمارين شهر أكتوبر 2026'), findsOneWidget);
+    // Verify Compact Period & Date Filter Bar
     expect(find.text('الكل'), findsOneWidget);
     expect(find.text('صباحي'), findsOneWidget);
     expect(find.text('مسائي'), findsOneWidget);
-    expect(find.text('البحث بيوم محدد أو نطاق أيام في الشهر...'), findsOneWidget);
+    expect(find.text('التاريخ'), findsOneWidget);
 
     // 2. Verify Session 1 Cards Details
     expect(find.text('ملعب بارادم بالمكلا'), findsOneWidget);

@@ -282,7 +282,7 @@ Future<void> configureMasterDependencies() async {
     ..registerLazySingleton<TeamsRepository>(
       () => TeamsRepositoryImpl(database),
     )
-    ..registerFactory<TeamsBloc>(
+    ..registerLazySingleton<TeamsBloc>(
       () => TeamsBloc(serviceLocator<TeamsRepository>()),
     )
     ..registerLazySingleton<PlayersDao>(() => PlayersDao(database))
@@ -301,7 +301,7 @@ Future<void> configureMasterDependencies() async {
     ..registerLazySingleton<ArchivePlayerUseCase>(
       () => ArchivePlayerUseCase(serviceLocator<PlayersRepository>()),
     )
-    ..registerFactory<PlayersBloc>(
+    ..registerLazySingleton<PlayersBloc>(
       () => PlayersBloc(
         serviceLocator<GetPlayersUseCase>(),
         serviceLocator<AddPlayerUseCase>(),

@@ -35,11 +35,34 @@ class ActiveTeamState {
     ),
   ];
 
-  static ActiveTeamState fromId(String id) {
-    return availableTeams.firstWhere(
-      (t) => t.teamId == id,
-      orElse: () => defaultTeam,
-    );
+  static final Map<String, ActiveTeamState> _dynamicTeams = {};
+
+  static void registerTeams(List<dynamic> teams) {
+    for (final t in teams) {
+      final id = (t as dynamic).id as String;
+      final name = (t as dynamic).name as String;
+      final cat = (t as dynamic).category as String? ?? '';
+      _dynamicTeams[id] = ActiveTeamState(
+        teamId: id,
+        teamName: name,
+        category: cat,
+      );
+    }
+  }
+
+  static ActiveTeamState fromId(String id, [String? fallbackName]) {
+    if (_dynamicTeams.containsKey(id)) {
+      return _dynamicTeams[id]!;
+    }
+    for (final t in availableTeams) {
+      if (t.teamId == id) return t;
+    }
+    if (fallbackName != null && fallbackName.trim().isNotEmpty) {
+      final state = ActiveTeamState(teamId: id, teamName: fallbackName.trim());
+      _dynamicTeams[id] = state;
+      return state;
+    }
+    return defaultTeam;
   }
 
   ActiveTeamState copyWith({
@@ -71,19 +94,25 @@ class ActiveTeamCubit extends Cubit<ActiveTeamState> {
   ActiveTeamCubit({ActiveTeamState initialState = ActiveTeamState.defaultTeam})
       : super(initialState);
 
+  void updateAvailableTeams(List<dynamic> teams) {
+    ActiveTeamState.registerTeams(teams);
+  }
+
   void selectTeam({
     required String teamId,
     required String teamName,
     String category = '',
   }) {
-    emit(ActiveTeamState(
+    final state = ActiveTeamState(
       teamId: teamId,
       teamName: teamName,
       category: category,
-    ));
+    );
+    ActiveTeamState._dynamicTeams[teamId] = state;
+    emit(state);
   }
 
-  void selectById(String teamId) {
-    emit(ActiveTeamState.fromId(teamId));
+  void selectById(String teamId, [String? fallbackName]) {
+    emit(ActiveTeamState.fromId(teamId, fallbackName));
   }
 }

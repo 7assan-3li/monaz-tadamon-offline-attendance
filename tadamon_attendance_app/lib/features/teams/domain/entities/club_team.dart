@@ -3,10 +3,10 @@ class ClubTeam {
     required this.id,
     required this.name,
     required this.category,
-    required this.updatedAt,
+    this.updatedAt,
   });
   final String id;
   final String name;
   final String category;
-  final DateTime updatedAt;
+  final DateTime? updatedAt;
 }

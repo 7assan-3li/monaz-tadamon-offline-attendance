@@ -12,7 +12,12 @@ import 'package:tadamon_attendance_app/features/reports/presentation/screens/aud
 import 'package:tadamon_attendance_app/features/reports/presentation/screens/master_review_approval_screen.dart';
 import 'package:tadamon_attendance_app/features/reports/presentation/widgets/export_success_bottom_sheet.dart';
 import 'package:tadamon_attendance_app/core/di/service_locator.dart';
+import 'package:tadamon_attendance_app/core/presentation/app_role_scope.dart';
+import 'package:tadamon_attendance_app/core/theme/club_theme_service.dart';
+import 'package:tadamon_attendance_app/core/widgets/club_logo_widget.dart';
 import 'package:tadamon_attendance_app/features/teams/presentation/bloc/active_team_cubit.dart';
+import 'package:tadamon_attendance_app/features/teams/presentation/bloc/teams_bloc.dart';
+import 'package:tadamon_attendance_app/features/teams/domain/entities/club_team.dart';
 
 class ReportsHubScreen extends StatefulWidget {
   const ReportsHubScreen({
@@ -71,8 +76,16 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
     {'year': 2026, 'month': 7, 'label': 'يوليو 2026', 'isCurrent': false},
   ];
 
-  String get _currentSquadName =>
-      _squads.firstWhere((s) => s['id'] == _selectedTeamId, orElse: () => _squads.first)['name']!;
+  String get _currentSquadName {
+    try {
+      final teamsState = serviceLocator<TeamsBloc>().state;
+      if (teamsState is TeamsReady) {
+        final match = teamsState.teams.where((t) => t.id == _selectedTeamId);
+        if (match.isNotEmpty) return match.first.name;
+      }
+    } catch (_) {}
+    return _squads.firstWhere((s) => s['id'] == _selectedTeamId, orElse: () => _squads.first)['name']!;
+  }
 
   String get _currentMonthName =>
       _months.firstWhere(
@@ -200,80 +213,85 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context, ReportsState state) {
+    final isMaster = AppRoleScope.isMaster(context);
+
     return AppBar(
       elevation: 0,
-      backgroundColor: AppColors.royalBlue,
-      titleSpacing: 12,
+      backgroundColor: ClubThemeService.instance.currentPrimaryColor,
+      titleSpacing: 16,
       automaticallyImplyLeading: false,
       title: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Image.asset(
-              'assets/images/main_logo.png',
-              width: 30,
-              height: 32,
-              fit: BoxFit.contain,
-              semanticLabel: 'شعار نادي تضامن حضرموت',
-            ),
-          ),
+          const ClubLogoWidget(width: 30, height: 32),
           const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    const Text(
-                      'تضامن حضرموت',
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 5,
-                        vertical: 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text(
-                        'المعتمد',
-                        style: TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF38BDF8),
-                        ),
-                      ),
-                    ),
-                  ],
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'التقارير وسجل الحضور',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
-                const Text(
-                  'تحضير نادي تضامن حضرموت',
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 10,
-                    color: Color(0xFF93C5FD),
-                  ),
-                ),
-              ],
-            ),
+              ),
+              ValueListenableBuilder<String>(
+                valueListenable: ClubThemeService.instance.clubNameNotifier,
+                builder: (context, clubName, _) {
+                  return Text(
+                    clubName,
+                    style: const TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 10,
+                      color: Color(0xFF93C5FD),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
         ],
       ),
       actions: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          margin: const EdgeInsetsDirectional.only(end: 4),
+          decoration: BoxDecoration(
+            color: isMaster
+                ? Colors.white.withValues(alpha: 0.18)
+                : const Color(0xFFF59E0B).withValues(alpha: 0.22),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isMaster
+                  ? Colors.white.withValues(alpha: 0.4)
+                  : const Color(0xFFFCD34D).withValues(alpha: 0.7),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isMaster ? LucideIcons.shieldCheck : LucideIcons.clipboardCheck,
+                size: 13,
+                color: isMaster ? Colors.white : const Color(0xFFFEF08A),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                isMaster ? 'جهاز الإدارة' : 'جهاز المحضر',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: isMaster ? Colors.white : const Color(0xFFFEF08A),
+                ),
+              ),
+            ],
+          ),
+        ),
         IconButton(
           icon: const Icon(
             LucideIcons.bell,
@@ -333,23 +351,13 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
         _buildSegmentedControl(),
         const SizedBox(height: 14),
 
-        // 5. Tab Content: Focused and Simple
+        // 4. Tab Content: Focused and Simple
         if (_selectedTab == 0) ...[
-          // سجل الحصص المحفوظة (حصة بحصة، فلترة التواريخ، ومراجعة واعتماد الكشف)
           _buildSavedSessionsTab(state),
         ] else if (_selectedTab == 1) ...[
-          // حافظة التحضير (شهري)
-          _buildMonthlyStatsBanner(state),
-          const SizedBox(height: 14),
-          _buildMatrixCard(state.sheet),
-          const SizedBox(height: 14),
-          _buildPdfExportCard(context),
+          _buildMonthlyAttendanceTab(context, state),
         ] else ...[
-          // خلاصة الإداري (تجميعي)
-          _buildOfficialSummaryCard(state.summary),
-
-          const SizedBox(height: 14),
-          _buildSummaryExportCard(context),
+          _buildAdministrativeSummaryTab(context, state),
         ],
         const SizedBox(height: 24),
       ],
@@ -630,15 +638,11 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // 1. ملخص حصص الفترة المحددة
-        _buildSessionsSummaryCard(state, totalSessions),
+        // Compact filter bar
+        _buildMonthSubFilterBar(),
         const SizedBox(height: 12),
 
-        // 2. شريط فلترة الفترة والتواريخ في الشهر
-        _buildMonthSubFilterBar(),
-        const SizedBox(height: 14),
-
-        // 3. عنوان القائمة مع العدد
+        // Header with count
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -646,7 +650,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
               children: [
                 const Icon(
                   LucideIcons.calendarRange,
-                  size: 18,
+                  size: 16,
                   color: AppColors.royalBlue,
                 ),
                 const SizedBox(width: 8),
@@ -654,7 +658,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                   'الحصص التدريبية المسجلة ($totalSessions)',
                   style: const TextStyle(
                     fontFamily: 'Cairo',
-                    fontSize: 14,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
                   ),
@@ -662,19 +666,29 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
               ],
             ),
             if (_selectedPeriod != 'all' || _customStartDate != null)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.royalBlue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Text(
-                  'نتائج مفلترة',
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.royalBlue,
+              InkWell(
+                onTap: _clearAllFilters,
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.royalBlue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(LucideIcons.x, size: 12, color: AppColors.royalBlue),
+                      SizedBox(width: 4),
+                      Text(
+                        'إلغاء الفلترة',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.royalBlue,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -682,7 +696,6 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
         ),
         const SizedBox(height: 10),
 
-        // 4. بطاقات الحصص أو حالة الفراغ
         if (sessions.isEmpty)
           _buildEmptySessionsCard()
         else
@@ -700,167 +713,165 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
     );
   }
 
-  Widget _buildMonthSubFilterBar() {
-    final hasActiveDateFilter = _customStartDate != null;
-    final hasActivePeriodFilter = _selectedPeriod != 'all';
-    final hasAnyFilter = hasActiveDateFilter || hasActivePeriodFilter;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: hasAnyFilter
-              ? AppColors.royalBlue.withValues(alpha: 0.4)
-              : const Color(0xFFE2E8F0),
-          width: hasAnyFilter ? 1.5 : 1,
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Filter title & Reset button
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: AppColors.royalBlue.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Icon(
-                      LucideIcons.filter,
-                      size: 14,
-                      color: AppColors.royalBlue,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'فلترة تمارين شهر $_currentMonthName',
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-              if (hasAnyFilter)
-                InkWell(
-                  onTap: _clearAllFilters,
-                  borderRadius: BorderRadius.circular(6),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(LucideIcons.rotateCcw, size: 12, color: AppColors.royalBlue),
-                        SizedBox(width: 4),
-                        Text(
-                          'إلغاء الفلترة',
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.royalBlue,
-                          ),
-                        ),
-                      ],
-                    ),
+  Widget _buildMonthlyAttendanceTab(BuildContext context, ReportsLoaded state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Clean Export Action Buttons
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.royalBlue,
+                  foregroundColor: Colors.white,
+                  elevation: 1,
+                  padding: const EdgeInsets.symmetric(vertical: 11),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-            ],
-          ),
-          const SizedBox(height: 10),
+                onPressed: () {
+                  context.read<ReportsBloc>().add(const ExportMonthlyPdfEvent());
+                },
+                icon: const Icon(LucideIcons.fileDown, size: 16),
+                label: const Text(
+                  'تصدير كشف الحضور (PDF)',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.present,
+                  foregroundColor: Colors.white,
+                  elevation: 1,
+                  padding: const EdgeInsets.symmetric(vertical: 11),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () {
+                  context.read<ReportsBloc>().add(const ExportAdminSummaryExcelEvent());
+                },
+                icon: const Icon(LucideIcons.fileSpreadsheet, size: 16),
+                label: const Text(
+                  'تصدير كشف الجداول (Excel)',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _buildMatrixCard(state.sheet),
+      ],
+    );
+  }
 
-          // Period Chips Row: الكل | ☀️ صباحي | 🌙 مسائي | ⭐ استثنائي
-          Row(
-            children: [
-              _buildPeriodChip(label: 'الكل', value: 'all', icon: LucideIcons.layers),
-              const SizedBox(width: 5),
-              _buildPeriodChip(label: 'صباحي', value: 'morning', icon: LucideIcons.sunMedium),
-              const SizedBox(width: 5),
-              _buildPeriodChip(label: 'مسائي', value: 'evening', icon: LucideIcons.moon),
-              const SizedBox(width: 5),
-              _buildPeriodChip(label: 'استثنائي', value: 'extra', icon: LucideIcons.zap),
-            ],
+  Widget _buildAdministrativeSummaryTab(BuildContext context, ReportsLoaded state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Export button for official summary
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.royalBlue,
+              foregroundColor: Colors.white,
+              elevation: 1,
+              padding: const EdgeInsets.symmetric(vertical: 11),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () {
+              context.read<ReportsBloc>().add(const ExportAdminSummaryPdfEvent());
+            },
+            icon: const Icon(LucideIcons.fileText, size: 16),
+            label: const Text(
+              'تصدير خلاصة الإداري المعتمدة (PDF)',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 12.5,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
-          const SizedBox(height: 10),
+        ),
+        const SizedBox(height: 12),
+        _buildOfficialSummaryCard(state.summary),
+      ],
+    );
+  }
 
-          // Date Filter Button / Active Date Badge
+  Widget _buildMonthSubFilterBar() {
+    final hasActiveDateFilter = _customStartDate != null;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                _buildPeriodChip(label: 'الكل', value: 'all', icon: LucideIcons.layers),
+                const SizedBox(width: 4),
+                _buildPeriodChip(label: 'صباحي', value: 'morning', icon: LucideIcons.sunMedium),
+                const SizedBox(width: 4),
+                _buildPeriodChip(label: 'مسائي', value: 'evening', icon: LucideIcons.moon),
+              ],
+            ),
+          ),
+          const SizedBox(width: 6),
           InkWell(
             onTap: () => _showDateFilterDialog(context),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(8),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               decoration: BoxDecoration(
                 color: hasActiveDateFilter
-                    ? AppColors.royalBlue.withValues(alpha: 0.08)
-                    : const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(10),
+                    ? AppColors.royalBlue.withValues(alpha: 0.12)
+                    : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: hasActiveDateFilter
-                      ? AppColors.royalBlue.withValues(alpha: 0.4)
-                      : const Color(0xFFCBD5E1),
+                  color: hasActiveDateFilter ? AppColors.royalBlue : const Color(0xFFE2E8F0),
                 ),
               ),
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    LucideIcons.calendarDays,
-                    size: 16,
+                    LucideIcons.calendar,
+                    size: 14,
                     color: hasActiveDateFilter ? AppColors.royalBlue : AppColors.textSecondary,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      hasActiveDateFilter
-                          ? _buildDateFilterLabel()
-                          : 'البحث بيوم محدد أو نطاق أيام في الشهر...',
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 11.5,
-                        fontWeight: hasActiveDateFilter ? FontWeight.bold : FontWeight.normal,
-                        color: hasActiveDateFilter ? AppColors.royalBlue : AppColors.textSecondary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  const SizedBox(width: 4),
+                  Text(
+                    hasActiveDateFilter ? _buildDateFilterLabel() : 'التاريخ',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.bold,
+                      color: hasActiveDateFilter ? AppColors.royalBlue : AppColors.textSecondary,
                     ),
                   ),
-                  if (hasActiveDateFilter)
-                    GestureDetector(
-                      onTap: _clearDateFilter,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: AppColors.royalBlue.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          LucideIcons.x,
-                          size: 13,
-                          color: AppColors.royalBlue,
-                        ),
-                      ),
-                    )
-                  else
-                    const Icon(
-                      LucideIcons.chevronDown,
-                      size: 14,
-                      color: AppColors.textSecondary,
-                    ),
                 ],
               ),
             ),
@@ -1116,225 +1127,6 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
       _customEndDate = null;
     });
     _loadReportsData();
-  }
-
-  Widget _buildSessionsSummaryCard(
-    ReportsLoaded state,
-    int totalSessions,
-  ) {
-    final sessions = state.sheet.sessions;
-    final totalPresent = sessions.fold<int>(0, (s, item) => s + item.presentCount);
-    final totalUnexcused = sessions.fold<int>(0, (s, item) => s + item.unexcusedCount);
-
-    final avgRate = sessions.isNotEmpty
-        ? (sessions.fold<double>(0.0, (s, item) => s + item.attendanceRate) / sessions.length)
-        : 0.0;
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: AppColors.royalBlue.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        LucideIcons.calendarCheck2,
-                        size: 19,
-                        color: AppColors.royalBlue,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'ملخص حصص الفترة المحددة',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          Text(
-                            '$_currentSquadName • $_currentMonthName',
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 10,
-                              color: AppColors.textSecondary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '$totalSessions تمرين مسجل',
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.royalBlue,
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // Metrics Row
-          Row(
-            children: [
-              Expanded(
-                child: _buildMetricTile(
-                  icon: LucideIcons.dumbbell,
-                  iconColor: AppColors.royalBlue,
-                  bgColor: const Color(0xFFEFF6FF),
-                  label: 'إجمالي الحصص',
-                  value: '$totalSessions',
-                  unit: 'حصة',
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildMetricTile(
-                  icon: LucideIcons.percent,
-                  iconColor: const Color(0xFF16A34A),
-                  bgColor: const Color(0xFFDCFCE7),
-                  label: 'متوسط الحضور',
-                  value: '${avgRate.toStringAsFixed(0)}%',
-                  unit: '',
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildMetricTile(
-                  icon: LucideIcons.users,
-                  iconColor: const Color(0xFF475569),
-                  bgColor: const Color(0xFFF1F5F9),
-                  label: 'حاضر / غياب',
-                  value: '$totalPresent / $totalUnexcused',
-                  unit: '',
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMetricTile({
-    required IconData icon,
-    required Color iconColor,
-    required Color bgColor,
-    required String label,
-    required String value,
-    required String unit,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Icon(icon, size: 12, color: iconColor),
-              ),
-              const SizedBox(width: 5),
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 8.5,
-                    color: AppColors.textSecondary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              if (unit.isNotEmpty) ...[
-                const SizedBox(width: 3),
-                Text(
-                  unit,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 9,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildEmptySessionsCard() {
@@ -1695,296 +1487,6 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
               fontWeight: FontWeight.bold,
               color: color,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMonthlyStatsBanner(ReportsLoaded state) {
-    final totalSessions = state.summary.totalSessions;
-    final totalPlayers = state.summary.rows.length;
-    final avgAttendance = totalPlayers > 0
-        ? (state.summary.rows.map((r) => r.attendanceRate).reduce((a, b) => a + b) / totalPlayers)
-        : 0.0;
-    final avgPctVal = avgAttendance <= 1.0 ? avgAttendance * 100 : avgAttendance;
-    final avgPctString = avgPctVal.toStringAsFixed(0);
-    final committedPlayers = state.summary.rows.where((r) => (r.attendanceRate <= 1.0 ? r.attendanceRate * 100 : r.attendanceRate) >= 75.0).length;
-
-    final totalPresent = state.summary.rows.fold<int>(0, (s, r) => s + r.presentCount);
-    final totalExcused = state.summary.rows.fold<int>(0, (s, r) => s + r.excusedAbsenceCount);
-    final totalUnexcused = state.summary.rows.fold<int>(0, (s, r) => s + r.unexcusedAbsenceCount);
-    final totalEvents = totalPresent + totalExcused + totalUnexcused;
-
-    final presentPct = totalEvents > 0 ? ((totalPresent / totalEvents) * 100).round() : (totalSessions > 0 ? 0 : 100);
-    final excusedPct = totalEvents > 0 ? ((totalExcused / totalEvents) * 100).round() : 0;
-    final unexcusedPct = totalEvents > 0 ? ((totalUnexcused / totalEvents) * 100).round() : 0;
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSubtle),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: AppColors.sessionBackground,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        LucideIcons.activity,
-                        size: 18,
-                        color: AppColors.session,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'ملخص الحضور الشهري',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          Text(
-                            '$_currentSquadName • $_currentMonthName',
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 10,
-                              color: AppColors.textSecondary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: totalSessions > 0
-                      ? AppColors.presentBackground
-                      : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  totalSessions > 0 ? 'كشف معتمد' : 'في انتظار التمارين',
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: totalSessions > 0
-                        ? AppColors.present
-                        : AppColors.textSecondary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.canvas,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: AppColors.royalBlue.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          LucideIcons.dumbbell,
-                          size: 18,
-                          color: AppColors.royalBlue,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'إجمالي الحصص',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 9,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              Text(
-                                '$totalSessions',
-                                style: const TextStyle(
-                                  fontFamily: 'Cairo',
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              const Text(
-                                'حصة تدريب',
-                                style: TextStyle(
-                                  fontFamily: 'Cairo',
-                                  fontSize: 10,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.canvas,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: AppColors.presentBackground,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          LucideIcons.badgeCheck,
-                          size: 18,
-                          color: AppColors.present,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'متوسط الحضور',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 9,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              Text(
-                                '$avgPctString%',
-                                style: const TextStyle(
-                                  fontFamily: 'Cairo',
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.present,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'انضباط اللاعبين المستهدفين',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 11,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              Text(
-                '$committedPlayers / $totalPlayers لاعباً ملتزماً',
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: SizedBox(
-              height: 8,
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: presentPct > 0 ? presentPct : 1,
-                    child: Container(
-                      color: totalEvents > 0 ? AppColors.present : const Color(0xFFCBD5E1),
-                    ),
-                  ),
-                  if (excusedPct > 0)
-                    Expanded(
-                      flex: excusedPct,
-                      child: Container(color: AppColors.excused),
-                    ),
-                  if (unexcusedPct > 0)
-                    Expanded(
-                      flex: unexcusedPct,
-                      child: Container(color: AppColors.unexcused),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              _LegendDot(
-                color: totalEvents > 0 ? AppColors.present : const Color(0xFF94A3B8),
-                label: 'حاضر ($presentPct%)',
-              ),
-              const SizedBox(width: 12),
-              _LegendDot(color: AppColors.excused, label: 'بعذر ($excusedPct%)'),
-              const SizedBox(width: 12),
-              _LegendDot(color: AppColors.unexcused, label: 'غياب ($unexcusedPct%)'),
-            ],
           ),
         ],
       ),
@@ -2671,191 +2173,6 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
 
 
 
-  /// PDF Export Card for Tab 0
-  Widget _buildPdfExportCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSubtle),
-      ),
-      child: Column(
-        children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    LucideIcons.printer,
-                    size: 16,
-                    color: AppColors.royalBlue,
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    'تصدير كشف الحضور',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                'ملف PDF',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.royalBlue,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.royalBlue,
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: () {
-                context.read<ReportsBloc>().add(const ExportMonthlyPdfEvent());
-              },
-              icon: const Icon(LucideIcons.fileDown, size: 20, color: Colors.white),
-              label: const Text(
-                'تصدير كشف الحضور (PDF)',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Official Summary Export Card for Tab 1 (PDF & Excel)
-  Widget _buildSummaryExportCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSubtle),
-      ),
-      child: Column(
-        children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    LucideIcons.fileSpreadsheet,
-                    size: 16,
-                    color: AppColors.royalBlue,
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    'تصدير كشف التحضير والخلاصة الإدارية',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                'خيارات رسمية',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.royalBlue,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Button 1: PDF
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.royalBlue,
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: () {
-                context
-                    .read<ReportsBloc>()
-                    .add(const ExportAdminSummaryPdfEvent());
-              },
-              icon: const Icon(LucideIcons.fileText, size: 18, color: Colors.white),
-              label: const Text(
-                'تصدير خلاصة الإداري (PDF الرسمية)',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          // Button 2: Excel
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.present,
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: () {
-                context
-                    .read<ReportsBloc>()
-                    .add(const ExportAdminSummaryExcelEvent());
-              },
-              icon: const Icon(LucideIcons.download, size: 18, color: Colors.white),
-              label: const Text(
-                'تصدير كشف الجداول (Excel XLSX)',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // --- Modal Bottom Sheets ---
 
   void _showNotificationsSheet(BuildContext context) {
@@ -3114,6 +2431,26 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
   }
 
   void _showSquadSelectorSheet(BuildContext context) {
+    TeamsState? teamsState;
+    try {
+      teamsState = context.read<TeamsBloc>().state;
+    } catch (_) {
+      try {
+        if (serviceLocator.isRegistered<TeamsBloc>()) {
+          teamsState = serviceLocator<TeamsBloc>().state;
+        }
+      } catch (_) {}
+    }
+    final dynamicTeams = teamsState is TeamsReady && teamsState.teams.isNotEmpty
+        ? teamsState.teams
+        : _squads
+            .map((s) => ClubTeam(
+                  id: s['id']!,
+                  name: s['name']!,
+                  category: s['desc']!,
+                ))
+            .toList();
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -3148,30 +2485,30 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                 ],
               ),
               const Divider(height: 20),
-              for (final squad in _squads)
+              for (final team in dynamicTeams)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: InkWell(
                     onTap: () {
                       Navigator.of(ctx).pop();
-                      setState(() => _selectedTeamId = squad['id']!);
+                      setState(() => _selectedTeamId = team.id);
                       final cubit = _tryGetActiveTeamCubit(context);
-                      cubit?.selectById(squad['id']!);
+                      cubit?.selectById(team.id);
                       _loadReportsData();
                     },
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       decoration: BoxDecoration(
-                        color: _selectedTeamId == squad['id']
+                        color: _selectedTeamId == team.id
                             ? AppColors.sessionBackground
                             : AppColors.canvas,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: _selectedTeamId == squad['id']
+                          color: _selectedTeamId == team.id
                               ? AppColors.royalBlue
                               : AppColors.borderSubtle,
-                          width: _selectedTeamId == squad['id'] ? 1.5 : 1.0,
+                          width: _selectedTeamId == team.id ? 1.5 : 1.0,
                         ),
                       ),
                       child: Row(
@@ -3182,7 +2519,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                               Icon(
                                 LucideIcons.shield,
                                 size: 20,
-                                color: _selectedTeamId == squad['id']
+                                color: _selectedTeamId == team.id
                                     ? AppColors.royalBlue
                                     : AppColors.textSecondary,
                               ),
@@ -3191,18 +2528,18 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    squad['name']!,
+                                    team.name,
                                     style: TextStyle(
                                       fontFamily: 'Cairo',
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
-                                      color: _selectedTeamId == squad['id']
+                                      color: _selectedTeamId == team.id
                                           ? AppColors.royalBlue
                                           : AppColors.textPrimary,
                                     ),
                                   ),
                                   Text(
-                                    squad['desc']!,
+                                    team.category,
                                     style: const TextStyle(
                                       fontFamily: 'Cairo',
                                       fontSize: 10,
@@ -3213,7 +2550,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                               ),
                             ],
                           ),
-                          if (_selectedTeamId == squad['id'])
+                          if (_selectedTeamId == team.id)
                             Icon(LucideIcons.checkCircle2, color: AppColors.royalBlue, size: 20),
                         ],
                       ),
@@ -3553,36 +2890,6 @@ class _ProfileRow extends StatelessWidget {
             fontSize: 12,
             fontWeight: FontWeight.bold,
             color: valueColor ?? AppColors.textPrimary,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _LegendDot extends StatelessWidget {
-  const _LegendDot({required this.color, required this.label});
-
-  final Color color;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            fontFamily: 'Cairo',
-            fontSize: 10,
-            color: AppColors.textSecondary,
           ),
         ),
       ],

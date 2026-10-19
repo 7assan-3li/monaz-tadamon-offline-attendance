@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as path;
@@ -39,6 +40,25 @@ class BackupFileService {
     final fileName = 'نسخة_احتياطية_${safeClubName}_$dateStr.$backupExtension';
     final file = File(path.join(backupsDir.path, fileName));
     await file.writeAsString(package.rawContent, flush: true);
+
+    // On Android, also write directly into the public Downloads directory so the user sees it in My Files / Downloads
+    if (Platform.isAndroid) {
+      try {
+        final publicDownloadDir = Directory('/storage/emulated/0/Download');
+        if (publicDownloadDir.existsSync()) {
+          final publicBackupDir = Directory(path.join(publicDownloadDir.path, 'Tadamon_Backups'));
+          if (!publicBackupDir.existsSync()) {
+            await publicBackupDir.create(recursive: true);
+          }
+          final publicFile = File(path.join(publicBackupDir.path, fileName));
+          await publicFile.writeAsString(package.rawContent, flush: true);
+
+          final rootDownloadFile = File(path.join(publicDownloadDir.path, fileName));
+          await rootDownloadFile.writeAsString(package.rawContent, flush: true);
+        }
+      } catch (_) {}
+    }
+
     return file;
   }
 
@@ -55,17 +75,28 @@ class BackupFileService {
   }
 
   static Future<String?> pickAndReadBackupFile() async {
-    final picked = await FilePicker.pickFile(
-      type: FileType.any,
-    );
-    if (picked == null || picked.path == null) {
+    try {
+      final picked = await FilePicker.pickFile(
+        type: FileType.any,
+      );
+      if (picked == null) {
+        return null;
+      }
+      if (picked.path != null) {
+        final file = File(picked.path!);
+        if (await file.exists()) {
+          return await file.readAsString();
+        }
+      }
+      try {
+        return await picked.xFile.readAsString();
+      } catch (_) {
+        final bytes = await picked.readAsBytes();
+        return utf8.decode(bytes);
+      }
+    } catch (_) {
       return null;
     }
-    final file = File(picked.path!);
-    if (await file.exists()) {
-      return await file.readAsString();
-    }
-    return null;
   }
 
   static Future<List<BackupFileInfo>> listLocalBackups() async {

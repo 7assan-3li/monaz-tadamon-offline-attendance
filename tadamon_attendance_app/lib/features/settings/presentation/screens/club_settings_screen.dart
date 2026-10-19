@@ -22,6 +22,8 @@ import 'package:tadamon_attendance_app/core/widgets/club_logo_widget.dart';
 import 'package:tadamon_attendance_app/features/backup/domain/services/backup_file_service.dart';
 import 'package:tadamon_attendance_app/features/backup/domain/usecases/create_backup_use_case.dart';
 import 'package:tadamon_attendance_app/features/backup/domain/usecases/restore_backup_use_case.dart';
+import 'package:tadamon_attendance_app/features/settings/presentation/screens/club_themes_screen.dart';
+import 'package:tadamon_attendance_app/features/teams/presentation/bloc/teams_bloc.dart';
 import 'package:tadamon_attendance_app/features/teams/presentation/screens/teams_screen.dart';
 
 class ClubSettingsScreen extends StatelessWidget {
@@ -82,9 +84,11 @@ class ClubSettingsScreen extends StatelessWidget {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
+    final isMaster = AppRoleScope.isMaster(context);
+
     return AppBar(
       elevation: 0,
-      backgroundColor: AppColors.royalBlue,
+      backgroundColor: ClubThemeService.instance.currentPrimaryColor,
       titleSpacing: 16,
       automaticallyImplyLeading: false,
       title: Row(
@@ -144,40 +148,80 @@ class ClubSettingsScreen extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'لا توجد تنبيهات أمنية جديدة • النظام يعمل بكفاءة كاملة',
-                    style: TextStyle(fontFamily: 'Cairo'),
-                  ),
-                ),
-              );
-            },
-            icon: const Icon(
-              LucideIcons.bell,
-              color: Colors.white,
-              size: 20,
-            ),
-            tooltip: 'التنبيهات الميدانية',
-          ),
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-            ),
-            child: const Icon(
-              LucideIcons.user,
-              color: Colors.white,
-              size: 16,
-            ),
-          ),
         ],
       ),
+      actions: [
+        // Subtle Role Indicator Pill
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          margin: const EdgeInsetsDirectional.only(end: 4),
+          decoration: BoxDecoration(
+            color: isMaster
+                ? Colors.white.withValues(alpha: 0.18)
+                : const Color(0xFFF59E0B).withValues(alpha: 0.22),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isMaster
+                  ? Colors.white.withValues(alpha: 0.4)
+                  : const Color(0xFFFCD34D).withValues(alpha: 0.7),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isMaster ? LucideIcons.shieldCheck : LucideIcons.clipboardCheck,
+                size: 13,
+                color: isMaster ? Colors.white : const Color(0xFFFEF08A),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                isMaster ? 'جهاز الإدارة' : 'جهاز المحضر',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: isMaster ? Colors.white : const Color(0xFFFEF08A),
+                ),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          onPressed: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'لا توجد تنبيهات أمنية جديدة • النظام يعمل بكفاءة كاملة',
+                  style: TextStyle(fontFamily: 'Cairo'),
+                ),
+              ),
+            );
+          },
+          icon: const Icon(
+            LucideIcons.bell,
+            color: Colors.white,
+            size: 20,
+          ),
+          tooltip: 'التنبيهات الميدانية',
+        ),
+        Container(
+          width: 32,
+          height: 32,
+          margin: const EdgeInsetsDirectional.only(end: 12),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+          ),
+          child: const Icon(
+            LucideIcons.user,
+            color: Colors.white,
+            size: 16,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -453,41 +497,6 @@ class _SettingsContent extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.borderSubtle),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  LucideIcons.info,
-                  size: 16,
-                  color: isMaster
-                      ? const Color(0xFF0284C7)
-                      : const Color(0xFF059669),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    isMaster
-                        ? 'جميع شاشات النظام مفتوحة بكامل الصلاحيات. يمكنك تحويل هذا الهاتف مؤقتاً لتجربة وضع المحضر الميداني (رصد وترحيل فقط).'
-                        : 'أنت الآن في وضع المحضر الميداني. جميع واجهات النظام متاحة للاستعراض، ويتم قفل الكشوفات تلقائياً عند ترحيلها للإدارة لمنع أي تعديل لاحق عليها.',
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 11,
-                      color: Color(0xFF334155),
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
           if (onSwitchToFieldMode != null) ...[
             const SizedBox(height: 14),
             SizedBox(
@@ -499,14 +508,14 @@ class _SettingsContent extends StatelessWidget {
                       context: context,
                       builder: (ctx) => AlertDialog(
                         title: const Text(
-                          'تحويل إلى وضع المحضر الميداني؟',
+                          'تخصيص الهاتف كـ «جهاز المحضر الميداني»؟',
                           style: TextStyle(
                             fontFamily: 'Cairo',
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         content: const Text(
-                          'سيتحول التطبيق فوراً إلى تجربة المحضر الميداني (رصد وترحيل فقط).\n\nللرجوع إلى وضع الإدارة، سيتطلب إدخال رمز PIN.',
+                          'سيتحول هذا الهاتف إلى وضع المحضر الميداني (رصد التمارين وترحيلها فقط مع قفل التعديل الإداري).\n\nللعودة إلى وضع الإدارة العامة، سيتطلب إدخال رمز PIN الإداري.',
                           style: TextStyle(fontFamily: 'Cairo', fontSize: 13),
                         ),
                         actions: [
@@ -524,7 +533,7 @@ class _SettingsContent extends StatelessWidget {
                               Navigator.pop(ctx);
                               onSwitchToFieldMode?.call();
                             },
-                            child: const Text('تأكيد التحويل',
+                            child: const Text('تأكيد التحويل للمحضر',
                                 style: TextStyle(fontFamily: 'Cairo')),
                           ),
                         ],
@@ -536,14 +545,14 @@ class _SettingsContent extends StatelessWidget {
                 },
                 icon: Icon(
                   isMaster
-                      ? LucideIcons.arrowRightLeft
-                      : LucideIcons.lockKeyhole,
+                      ? LucideIcons.smartphone
+                      : LucideIcons.shieldCheck,
                   size: 16,
                 ),
                 label: Text(
                   isMaster
-                      ? 'التبديل إلى وضع المحضر الميداني (Field Mode)'
-                      : 'العودة إلى وضع الإدارة العامة (PIN)',
+                      ? 'تفعيل هذا الهاتف كـ «جهاز المحضر الميداني»'
+                      : 'العودة إلى «جهاز الإدارة العامة» (PIN)',
                   style: const TextStyle(
                     fontFamily: 'Cairo',
                     fontSize: 13,
@@ -859,9 +868,10 @@ class _SettingsContent extends StatelessWidget {
 
   Widget _buildClubThemeCard(BuildContext context) {
     final activeHex = settings.primaryColorHex?.toUpperCase() ?? '#0F48A2';
+    final activeColor = ClubThemeService.parseColorHex(activeHex);
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
@@ -876,167 +886,110 @@ class _SettingsContent extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    width: 14,
-                    height: 14,
+                    width: 32,
+                    height: 32,
                     decoration: BoxDecoration(
-                      color: AppColors.royalBlue,
+                      color: activeColor.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'اختر الهوية اللونية المعتمدة للنادي',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+                    child: Icon(
+                      LucideIcons.palette,
+                      size: 18,
+                      color: activeColor,
                     ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'ثيمات وألوان التطبيق المعتمدة',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        'تخصيص الهوية اللونية لكافة شاشات النظام',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 10.5,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.sessionBackground,
-                  borderRadius: BorderRadius.circular(6),
+                  color: activeColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: activeColor.withValues(alpha: 0.3)),
                 ),
-                child: Text(
-                  activeHex,
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.royalBlue,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'حدد ثيم ناديك الرياضي لتغيير كافة واجهات التطبيق، الشريط العلوي، والأزرار والتقارير تلقائياً:',
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              fontSize: 11,
-              color: AppColors.textSecondary,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final preset in kClubThemePresets) ...[
-                InkWell(
-                  onTap: () => _applyThemePreset(context, preset),
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: preset.hex.toUpperCase() == activeHex
-                          ? preset.primaryColor.withValues(alpha: 0.12)
-                          : const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: preset.hex.toUpperCase() == activeHex
-                            ? preset.primaryColor
-                            : AppColors.borderSubtle,
-                        width:
-                            preset.hex.toUpperCase() == activeHex ? 1.8 : 1.0,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: activeColor,
+                        shape: BoxShape.circle,
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 16,
-                          height: 16,
-                          decoration: BoxDecoration(
-                            color: preset.primaryColor,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 1.5),
-                            boxShadow: const [
-                              BoxShadow(
-                                  color: Color(0x20000000), blurRadius: 2),
-                            ],
-                          ),
-                          child: preset.hex.toUpperCase() == activeHex
-                              ? const Icon(Icons.check,
-                                  size: 10, color: Colors.white)
-                              : null,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          preset.name,
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 11,
-                            fontWeight: preset.hex.toUpperCase() == activeHex
-                                ? FontWeight.bold
-                                : FontWeight.w600,
-                            color: preset.hex.toUpperCase() == activeHex
-                                ? preset.primaryColor
-                                : AppColors.textPrimary,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(width: 6),
+                    Text(
+                      activeHex,
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: activeColor,
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ],
           ),
           const SizedBox(height: 14),
           const Divider(),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _openCustomColorModal(context),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 9, horizontal: 10),
-                    side: const BorderSide(color: AppColors.borderSubtle),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                  ),
-                  icon: const Icon(LucideIcons.pipette,
-                      size: 15, color: AppColors.textSecondary),
-                  label: const Text(
-                    'تخصيص لون مخصص (HEX)',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => BlocProvider.value(
+                      value: context.read<SettingsBloc>(),
+                      child: ClubThemesScreen(currentSettings: settings),
                     ),
                   ),
+                );
+              },
+              icon: const Icon(LucideIcons.palette, size: 18),
+              label: const Text(
+                'فتح لوحة الألوان واختيار ثيم النظام',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(width: 8),
-              if (activeHex != '#0F48A2')
-                TextButton.icon(
-                  onPressed: () => _resetThemeColor(context),
-                  style: TextButton.styleFrom(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  ),
-                  icon: const Icon(LucideIcons.rotateCcw,
-                      size: 14, color: AppColors.textSecondary),
-                  label: const Text(
-                    'استعادة أزرق التضامن',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 11,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: activeColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
-            ],
+              ),
+            ),
           ),
         ],
       ),
@@ -1312,16 +1265,6 @@ class _SettingsContent extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'تصدير واستيراد قاعدة البيانات كملف موثق رقمياً (.monaz) لنقل كافة الفرق والتمارين واللاعبين بين الأجهزة أوفلاين:',
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              fontSize: 11,
-              color: AppColors.textSecondary,
-              height: 1.4,
-            ),
           ),
           const SizedBox(height: 12),
           Row(
@@ -1912,13 +1855,10 @@ class _SettingsContent extends StatelessWidget {
 
   Future<void> _pickClubLogo(BuildContext context) async {
     try {
-      final picked = await FilePicker.pickFile(
-        type: FileType.custom,
-        allowedExtensions: ['png', 'jpg', 'jpeg', 'webp'],
+      final file = await FilePicker.pickFile(
+        type: FileType.image,
       );
-      if (picked == null || picked.path == null) return;
-
-      final originalPath = picked.path!;
+      if (file == null) return;
 
       final docsDir = await getApplicationDocumentsDirectory();
       final logosDir = Directory(p.join(docsDir.path, 'club_branding'));
@@ -1926,12 +1866,24 @@ class _SettingsContent extends StatelessWidget {
         await logosDir.create(recursive: true);
       }
 
-      final ext = p.extension(originalPath);
+      final ext = file.extension != null
+          ? '.${file.extension}'
+          : (file.path != null ? p.extension(file.path!) : '.png');
       final destPath = p.join(
         logosDir.path,
         'club_logo_${DateTime.now().millisecondsSinceEpoch}$ext',
       );
-      await File(originalPath).copy(destPath);
+
+      if (file.path != null && await File(file.path!).exists()) {
+        await File(file.path!).copy(destPath);
+      } else {
+        final bytes = await file.readAsBytes();
+        if (bytes.isNotEmpty) {
+          await File(destPath).writeAsBytes(bytes, flush: true);
+        } else {
+          throw Exception('تعذر قراءة بيانات صورة الشعار');
+        }
+      }
 
       if (context.mounted) {
         context.read<SettingsBloc>().add(
@@ -1981,13 +1933,11 @@ class _SettingsContent extends StatelessWidget {
 
   Future<void> _pickClubIdentityDocument(BuildContext context) async {
     try {
-      final picked = await FilePicker.pickFile(
+      final file = await FilePicker.pickFile(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'doc', 'docx', 'png', 'jpg'],
       );
-      if (picked == null || picked.path == null) return;
-
-      final originalPath = picked.path!;
+      if (file == null) return;
 
       final docsDir = await getApplicationDocumentsDirectory();
       final docsFolder = Directory(p.join(docsDir.path, 'club_documents'));
@@ -1995,12 +1945,24 @@ class _SettingsContent extends StatelessWidget {
         await docsFolder.create(recursive: true);
       }
 
-      final ext = p.extension(originalPath);
+      final ext = file.extension != null
+          ? '.${file.extension}'
+          : (file.path != null ? p.extension(file.path!) : '.pdf');
       final destPath = p.join(
         docsFolder.path,
         'identity_doc_${DateTime.now().millisecondsSinceEpoch}$ext',
       );
-      await File(originalPath).copy(destPath);
+
+      if (file.path != null && await File(file.path!).exists()) {
+        await File(file.path!).copy(destPath);
+      } else {
+        final bytes = await file.readAsBytes();
+        if (bytes.isNotEmpty) {
+          await File(destPath).writeAsBytes(bytes, flush: true);
+        } else {
+          throw Exception('تعذر قراءة بيانات ملف الوثيقة');
+        }
+      }
 
       if (context.mounted) {
         context.read<SettingsBloc>().add(
@@ -2040,154 +2002,6 @@ class _SettingsContent extends StatelessWidget {
         content: Text(
           'تمت إزالة وثيقة الهوية بنجاح',
           style: TextStyle(fontFamily: 'Cairo'),
-        ),
-      ),
-    );
-  }
-
-  void _applyThemePreset(BuildContext context, ClubThemePreset preset) {
-    ClubThemeService.instance.updatePrimaryColor(preset.primaryColor);
-    context.read<SettingsBloc>().add(
-          SettingsSaved(settings.copyWith(primaryColorHex: preset.hex)),
-        );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'تم تفعيل ثيم: ${preset.name} بنجاح',
-          style: const TextStyle(fontFamily: 'Cairo'),
-        ),
-        backgroundColor: preset.primaryColor,
-      ),
-    );
-  }
-
-  void _resetThemeColor(BuildContext context) {
-    ClubThemeService.instance.resetToDefault();
-    context.read<SettingsBloc>().add(
-          SettingsSaved(settings.copyWith(primaryColorHex: '#0F48A2')),
-        );
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'تمت استعادة الهوية اللونية الرسمية (أزرق تضامن حضرموت)',
-          style: TextStyle(fontFamily: 'Cairo'),
-        ),
-        backgroundColor: AppColors.royalBlue,
-      ),
-    );
-  }
-
-  void _openCustomColorModal(BuildContext context) {
-    final hexController = TextEditingController(
-      text: settings.primaryColorHex ?? '#0F48A2',
-    );
-    Color previewColor = AppColors.primary;
-
-    showDialog<void>(
-      context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setStateModal) => AlertDialog(
-          title: const Text(
-            'تخصيص لون الهوية للنادي',
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'أدخل كود اللون بنظام HEX (مثال: #0F48A2 أو #047857):',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 11,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: previewColor,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.borderSubtle),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: hexController,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: '#0F48A2',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 8),
-                      ),
-                      onChanged: (val) {
-                        try {
-                          final parsed = ClubThemeService.colorFromHex(val);
-                          setStateModal(() {
-                            previewColor = parsed;
-                          });
-                        } catch (_) {}
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogCtx).pop(),
-              child: const Text('إلغاء', style: TextStyle(fontFamily: 'Cairo')),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: previewColor,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                final cleanHex = hexController.text.trim();
-                try {
-                  final color = ClubThemeService.colorFromHex(cleanHex);
-                  ClubThemeService.instance.updatePrimaryColor(color);
-                  context.read<SettingsBloc>().add(
-                        SettingsSaved(
-                            settings.copyWith(primaryColorHex: cleanHex)),
-                      );
-                  Navigator.of(dialogCtx).pop();
-                } catch (_) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'كود HEX غير صالح. تأكد من إدخال صيغة مثل #0F48A2',
-                        style: TextStyle(fontFamily: 'Cairo'),
-                      ),
-                      backgroundColor: AppColors.unexcused,
-                    ),
-                  );
-                }
-              },
-              child: const Text(
-                'تطبيق اللون',
-                style: TextStyle(fontFamily: 'Cairo', color: Colors.white),
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -2278,6 +2092,10 @@ class _SettingsContent extends StatelessWidget {
       if (confirmed == true && context.mounted) {
         await restoreUseCase(content);
         if (!context.mounted) return;
+        context.read<SettingsBloc>().add(const SettingsRequested());
+        try {
+          context.read<TeamsBloc>().add(const TeamsRequested());
+        } catch (_) {}
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('تمت استعادة كافة البيانات بنجاح!',

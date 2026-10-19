@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:tadamon_attendance_app/core/constants/app_colors.dart';
-import 'package:tadamon_attendance_app/core/widgets/confirmation_dialog.dart';
 import 'package:tadamon_attendance_app/core/di/service_locator.dart';
+import 'package:tadamon_attendance_app/core/presentation/app_role_scope.dart';
+import 'package:tadamon_attendance_app/core/widgets/confirmation_dialog.dart';
+import 'package:tadamon_attendance_app/core/widgets/club_logo_widget.dart';
+import 'package:tadamon_attendance_app/core/theme/club_theme_service.dart';
+import 'package:tadamon_attendance_app/features/teams/domain/entities/club_team.dart';
+import 'package:tadamon_attendance_app/features/teams/presentation/bloc/teams_bloc.dart';
 import 'package:tadamon_attendance_app/features/teams/presentation/bloc/active_team_cubit.dart';
 import 'package:tadamon_attendance_app/features/players/domain/entities/club_player.dart';
 import 'package:tadamon_attendance_app/features/players/presentation/bloc/players_bloc.dart';
@@ -105,12 +110,15 @@ class _PlayersListScreenState extends State<PlayersListScreen> {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
+    final isMaster = AppRoleScope.isMaster(context);
+
     return AppBar(
       elevation: 0,
-      backgroundColor: AppColors.royalBlue,
-      titleSpacing: 16,
+      backgroundColor: ClubThemeService.instance.currentPrimaryColor,
+      titleSpacing: 12,
       automaticallyImplyLeading: false,
       title: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             padding: const EdgeInsets.all(2),
@@ -118,88 +126,99 @@ class _PlayersListScreenState extends State<PlayersListScreen> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Image.asset(
-              'assets/images/main_logo.png',
-              width: 30,
-              height: 32,
+            child: const ClubLogoWidget(
+              width: 28,
+              height: 30,
               fit: BoxFit.contain,
-              semanticLabel: 'شعار نادي تضامن حضرموت',
             ),
           ),
           const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    const Text(
-                      'تضامن حضرموت',
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 5,
-                        vertical: 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text(
-                        'المعتمد',
-                        style: TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF38BDF8),
-                        ),
-                      ),
-                    ),
-                  ],
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'كشف اللاعبين',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
-                const Text(
-                  'تحضير نادي تضامن حضرموت',
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 10,
-                    color: Color(0xFF93C5FD),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: () => _showNotificationsSheet(context),
-            icon: const Icon(
-              LucideIcons.bell,
-              color: Colors.white,
-              size: 20,
-            ),
-            tooltip: 'التنبيهات الميدانية',
-          ),
-          GestureDetector(
-            onTap: () => _showProfileSheet(context),
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
               ),
-              child: const Icon(LucideIcons.user, size: 16, color: Colors.white),
-            ),
+              Text(
+                'إدارة وتصنيف قوائم النادي',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 10,
+                  color: Color(0xFF93C5FD),
+                ),
+              ),
+            ],
           ),
         ],
       ),
+      actions: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          margin: const EdgeInsetsDirectional.only(end: 4),
+          decoration: BoxDecoration(
+            color: isMaster
+                ? Colors.white.withValues(alpha: 0.18)
+                : const Color(0xFFF59E0B).withValues(alpha: 0.22),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isMaster
+                  ? Colors.white.withValues(alpha: 0.4)
+                  : const Color(0xFFFCD34D).withValues(alpha: 0.7),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isMaster ? LucideIcons.shieldCheck : LucideIcons.clipboardCheck,
+                size: 13,
+                color: isMaster ? Colors.white : const Color(0xFFFEF08A),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                isMaster ? 'جهاز الإدارة' : 'جهاز المحضر',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: isMaster ? Colors.white : const Color(0xFFFEF08A),
+                ),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          onPressed: () => _showNotificationsSheet(context),
+          icon: const Icon(
+            LucideIcons.bell,
+            color: Colors.white,
+            size: 19,
+          ),
+          tooltip: 'التنبيهات الميدانية',
+        ),
+        GestureDetector(
+          onTap: () => _showProfileSheet(context),
+          child: Container(
+            width: 30,
+            height: 30,
+            margin: const EdgeInsetsDirectional.only(end: 12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+            ),
+            child: const Icon(LucideIcons.user, size: 15, color: Colors.white),
+          ),
+        ),
+      ],
     );
   }
 
@@ -258,12 +277,29 @@ class _PlayersListScreenState extends State<PlayersListScreen> {
       return true;
     }).toList();
 
-    final currentSquadName = switch (_selectedTeamFilter) {
-      'team-first' => 'الفريق الأول',
-      'team-youth' => 'فريق الشباب U-19',
-      'team-junior' => 'فريق الناشئين U-17',
-      _ => 'جميع الفئات',
-    };
+    var currentSquadName = 'جميع الفئات';
+    if (_selectedTeamFilter != 'all') {
+      try {
+        final teamsState = context.read<TeamsBloc>().state;
+        if (teamsState is TeamsReady) {
+          final found = teamsState.teams.cast<ClubTeam?>().firstWhere(
+            (t) => t?.id == _selectedTeamFilter,
+            orElse: () => null,
+          );
+          if (found != null) {
+            currentSquadName = found.name;
+          }
+        }
+      } catch (_) {}
+      if (currentSquadName == 'جميع الفئات') {
+        currentSquadName = switch (_selectedTeamFilter) {
+          'team-first' => 'الفريق الأول',
+          'team-youth' => 'فريق الشباب U-19',
+          'team-junior' => 'فريق الناشئين U-17',
+          _ => _selectedTeamFilter,
+        };
+      }
+    }
 
     return Column(
       children: [
@@ -644,74 +680,74 @@ class _PlayersListScreenState extends State<PlayersListScreen> {
     BuildContext context,
     List<ClubPlayer> allPlayers,
   ) {
-    final firstCount =
-        allPlayers.where((p) => p.teamId == 'team-first').length;
-    final youthCount =
-        allPlayers.where((p) => p.teamId == 'team-youth').length;
-    final juniorCount =
-        allPlayers.where((p) => p.teamId == 'team-junior').length;
+    List<ClubTeam> teams = [];
+    try {
+      final teamsState = context.read<TeamsBloc>().state;
+      if (teamsState is TeamsReady) {
+        teams = teamsState.teams;
+      }
+    } catch (_) {}
+    if (teams.isEmpty) {
+      teams = const [
+        ClubTeam(id: 'team-first', name: 'الفريق الأول', category: 'الفئة الأساسية المعتمدة للموسم'),
+        ClubTeam(id: 'team-youth', name: 'فريق الشباب', category: 'فئة الشباب لدوري المحافظة'),
+        ClubTeam(id: 'team-junior', name: 'فريق الناشئين', category: 'الفئة العمرية الصغرى'),
+      ];
+    }
 
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (ctx) => Container(
         padding: const EdgeInsets.all(20),
         decoration: const BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  icon: const Icon(LucideIcons.x),
-                ),
-                const Text(
-                  'اختيار الفئة والتشكيلة',
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    icon: const Icon(LucideIcons.x),
                   ),
-                ),
-              ],
-            ),
-            const Divider(height: 20),
-            _buildSquadSelectorOption(
-              ctx,
-              id: 'team-first',
-              title: 'الفريق الأول',
-              count: firstCount,
-              subtitle: 'الفئة الأساسية المعتمدة للموسم',
-            ),
-            _buildSquadSelectorOption(
-              ctx,
-              id: 'team-youth',
-              title: 'فريق الشباب (تحت 19)',
-              count: youthCount,
-              subtitle: 'فئة الشباب لدوري المحافظة',
-            ),
-            _buildSquadSelectorOption(
-              ctx,
-              id: 'team-junior',
-              title: 'فريق الناشئين (تحت 17)',
-              count: juniorCount,
-              subtitle: 'الفئة العمرية الصغرى',
-            ),
-            _buildSquadSelectorOption(
-              ctx,
-              id: 'all',
-              title: 'جميع الفئات واللاعبين',
-              count: allPlayers.length,
-              subtitle: 'عرض كافة كشوفات النادي الرياضية',
-            ),
-          ],
+                  const Text(
+                    'اختيار الفئة والتشكيلة',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 20),
+              ...teams.map((t) {
+                final count = allPlayers.where((p) => p.teamId == t.id).length;
+                return _buildSquadSelectorOption(
+                  ctx,
+                  id: t.id,
+                  title: t.name,
+                  count: count,
+                  subtitle: t.category.isNotEmpty ? t.category : 'فئة رياضية بنادي التضامن',
+                );
+              }),
+              _buildSquadSelectorOption(
+                ctx,
+                id: 'all',
+                title: 'جميع الفئات واللاعبين',
+                count: allPlayers.length,
+                subtitle: 'عرض كافة كشوفات النادي الرياضية',
+              ),
+            ],
+          ),
         ),
       ),
     );

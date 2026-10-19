@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:tadamon_attendance_app/core/constants/app_colors.dart';
+import 'package:tadamon_attendance_app/core/theme/club_theme_service.dart';
 
 class MasterAdminAppShell extends StatelessWidget {
   const MasterAdminAppShell({
@@ -14,16 +14,24 @@ class MasterAdminAppShell extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
 
+  Color get _navBarColor {
+    final primary = ClubThemeService.instance.currentPrimaryColor;
+    final hsl = HSLColor.fromColor(primary);
+    return hsl.withLightness((hsl.lightness - 0.12).clamp(0.0, 1.0)).toColor();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final navColor = _navBarColor;
+
     return Scaffold(
       body: SafeArea(child: child),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: AppColors.royalBlueDark,
+          color: navColor,
           boxShadow: [
             BoxShadow(
-              color: AppColors.royalBlueDark.withValues(alpha: 0.25),
+              color: navColor.withValues(alpha: 0.25),
               blurRadius: 16,
               offset: const Offset(0, -4),
             ),
@@ -31,7 +39,7 @@ class MasterAdminAppShell extends StatelessWidget {
         ),
         child: NavigationBarTheme(
           data: NavigationBarThemeData(
-            backgroundColor: AppColors.royalBlueDark,
+            backgroundColor: navColor,
             indicatorColor: Colors.white.withValues(alpha: 0.22),
             labelTextStyle: WidgetStateProperty.resolveWith((states) {
               if (states.contains(WidgetState.selected)) {

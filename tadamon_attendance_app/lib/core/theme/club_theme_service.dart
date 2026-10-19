@@ -81,11 +81,12 @@ class ClubThemeService {
       ValueNotifier<String>('تضامن حضرموت');
 
   Color get currentColor => primaryColorNotifier.value;
+  Color get currentPrimaryColor => currentColor;
   String? get currentLogoPath => logoPathNotifier.value;
   String get currentClubName => clubNameNotifier.value;
+  String get currentHex => colorToHex(currentColor);
 
   void setPrimaryColor(Color color) {
-    AppColors.applyThemeColor(color);
     primaryColorNotifier.value = color;
   }
 
@@ -104,13 +105,13 @@ class ClubThemeService {
   void updateClubName(String name) => setClubName(name);
 
   void resetToDefault() {
-    setPrimaryColor(AppColors.royalBlue);
+    setPrimaryColor(AppColors.defaultRoyalBlue);
     setLogoPath(null);
   }
 
   static Color colorFromHex(String hexString) => parseColorHex(hexString);
 
-  static Color parseColorHex(String? hexString, {Color fallback = AppColors.royalBlue}) {
+  static Color parseColorHex(String? hexString, {Color fallback = AppColors.defaultRoyalBlue}) {
     if (hexString == null || hexString.trim().isEmpty) {
       return fallback;
     }

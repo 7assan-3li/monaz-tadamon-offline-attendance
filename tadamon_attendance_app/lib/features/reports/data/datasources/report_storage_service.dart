@@ -24,6 +24,23 @@ class ReportStorageService {
       }
     }
 
+    if (Platform.isAndroid) {
+      try {
+        final publicDownload = Directory('/storage/emulated/0/Download/Tadamon_Reports');
+        if (!publicDownload.existsSync()) {
+          await publicDownload.create(recursive: true);
+        }
+        return publicDownload;
+      } catch (_) {
+        try {
+          final directDownload = Directory('/storage/emulated/0/Download');
+          if (directDownload.existsSync()) {
+            return directDownload;
+          }
+        } catch (_) {}
+      }
+    }
+
     try {
       final downloads = await getDownloadsDirectory();
       if (downloads != null) {
@@ -56,6 +73,19 @@ class ReportStorageService {
     final targetPath = p.join(dir.path, sanitizedName);
     final file = File(targetPath);
     await file.writeAsBytes(bytes, flush: true);
+
+    // On Android, ensure a copy is also in the public Download directory
+    if (Platform.isAndroid && !dir.path.startsWith('/storage/emulated/0/Download')) {
+      try {
+        final publicDir = Directory('/storage/emulated/0/Download/Tadamon_Reports');
+        if (!publicDir.existsSync()) {
+          await publicDir.create(recursive: true);
+        }
+        final publicFile = File(p.join(publicDir.path, sanitizedName));
+        await publicFile.writeAsBytes(bytes, flush: true);
+      } catch (_) {}
+    }
+
     return file;
   }
 
@@ -83,12 +113,16 @@ class ReportStorageService {
   /// Returns common system directory presets for the settings UI.
   Future<Map<String, String>> getDirectoryPresets() async {
     final presets = <String, String>{};
-    try {
-      final downloads = await getDownloadsDirectory();
-      if (downloads != null) {
-        presets['downloads'] = p.join(downloads.path, 'Tadamon_Reports');
-      }
-    } catch (_) {}
+    if (Platform.isAndroid) {
+      presets['downloads'] = '/storage/emulated/0/Download/Tadamon_Reports';
+    } else {
+      try {
+        final downloads = await getDownloadsDirectory();
+        if (downloads != null) {
+          presets['downloads'] = p.join(downloads.path, 'Tadamon_Reports');
+        }
+      } catch (_) {}
+    }
 
     try {
       final docs = await getApplicationDocumentsDirectory();

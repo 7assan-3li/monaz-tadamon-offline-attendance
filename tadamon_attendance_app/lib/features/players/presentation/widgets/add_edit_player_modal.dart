@@ -1,8 +1,13 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:tadamon_attendance_app/core/constants/app_colors.dart';
+import 'package:tadamon_attendance_app/core/di/service_locator.dart';
 import 'package:tadamon_attendance_app/features/players/domain/entities/club_player.dart';
+import 'package:tadamon_attendance_app/features/teams/domain/entities/club_team.dart';
+import 'package:tadamon_attendance_app/features/teams/domain/repositories/teams_repository.dart';
+import 'package:tadamon_attendance_app/features/teams/presentation/bloc/teams_bloc.dart';
 
 Future<ClubPlayer?> showAddEditPlayerModal(
   BuildContext context, {
@@ -50,6 +55,38 @@ class _PlayerFormState extends State<_PlayerForm> {
           : widget.defaultTeamId;
 
   late String _selectedPosition = _initPosition();
+  List<ClubTeam> _teams = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTeams();
+  }
+
+  Future<void> _loadTeams() async {
+    try {
+      if (mounted) {
+        final teamsBloc = context.read<TeamsBloc>();
+        if (teamsBloc.state is TeamsReady) {
+          setState(() {
+            _teams = (teamsBloc.state as TeamsReady).teams;
+          });
+          return;
+        }
+      }
+    } catch (_) {}
+
+    try {
+      if (serviceLocator.isRegistered<TeamsRepository>()) {
+        final list = await serviceLocator<TeamsRepository>().getTeams();
+        if (mounted && list.isNotEmpty) {
+          setState(() {
+            _teams = list;
+          });
+        }
+      }
+    } catch (_) {}
+  }
 
   bool get _isEditing =>
       widget.player != null && widget.player!.id.trim().isNotEmpty;
@@ -198,14 +235,18 @@ class _PlayerFormState extends State<_PlayerForm> {
               ),
             ),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                _buildTeamChip('team-first', 'الفريق الأول'),
-                const SizedBox(width: 8),
-                _buildTeamChip('team-youth', 'فريق الشباب U-19'),
-                const SizedBox(width: 8),
-                _buildTeamChip('team-junior', 'الناشئين U-17'),
-              ],
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: (_teams.isNotEmpty
+                      ? _teams
+                      : const [
+                          ClubTeam(id: 'team-first', name: 'الفريق الأول', category: 'الفريق الأول'),
+                          ClubTeam(id: 'team-youth', name: 'فريق الشباب U-19', category: 'تحت 19 سنة'),
+                          ClubTeam(id: 'team-junior', name: 'الناشئين U-17', category: 'تحت 17 سنة'),
+                        ])
+                  .map((t) => _buildTeamChip(t.id, t.name))
+                  .toList(),
             ),
             const SizedBox(height: 16),
 
@@ -265,29 +306,25 @@ class _PlayerFormState extends State<_PlayerForm> {
 
   Widget _buildTeamChip(String teamId, String label) {
     final isSel = _selectedTeamId == teamId;
-    return Expanded(
-      child: InkWell(
-        onTap: () => setState(() => _selectedTeamId = teamId),
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isSel ? AppColors.royalBlue : const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isSel ? AppColors.royalBlue : AppColors.borderSubtle,
-            ),
+    return InkWell(
+      onTap: () => setState(() => _selectedTeamId = teamId),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSel ? AppColors.royalBlue : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSel ? AppColors.royalBlue : AppColors.borderSubtle,
           ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              fontSize: 11,
-              fontWeight: isSel ? FontWeight.bold : FontWeight.w600,
-              color: isSel ? Colors.white : AppColors.textPrimary,
-            ),
-            overflow: TextOverflow.ellipsis,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: 12,
+            fontWeight: isSel ? FontWeight.bold : FontWeight.w600,
+            color: isSel ? Colors.white : AppColors.textPrimary,
           ),
         ),
       ),

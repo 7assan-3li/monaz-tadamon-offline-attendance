@@ -30,8 +30,8 @@ class TeamsRepositoryImpl implements TeamsRepository {
           id: team.id,
           name: team.name.trim(),
           category: team.category.trim(),
-          createdAt: team.updatedAt,
-          updatedAt: team.updatedAt,
+          createdAt: team.updatedAt ?? DateTime.now().toUtc(),
+          updatedAt: team.updatedAt ?? DateTime.now().toUtc(),
         ),
       );
 }

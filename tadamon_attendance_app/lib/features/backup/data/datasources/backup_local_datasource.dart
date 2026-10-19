@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:cryptography/cryptography.dart';
 import 'package:drift/drift.dart';
 import 'package:tadamon_attendance_app/core/database/app_database.dart';
+import 'package:tadamon_attendance_app/core/theme/club_theme_service.dart';
 import 'package:tadamon_attendance_app/features/backup/domain/entities/backup_manifest.dart';
 import 'package:tadamon_attendance_app/features/backup/domain/entities/backup_package.dart';
 
@@ -32,6 +33,8 @@ class BackupLocalDataSource {
               'pin_code_hash': settings.pinCodeHash,
               'entitlement_sport_enabled': settings.entitlementSportEnabled,
               'entitlement_counts_excused': settings.entitlementCountsExcused,
+              'primary_color_hex': ClubThemeService.instance.currentHex,
+              'logo_path': settings.logoPath,
             },
       'teams': teams
           .map((t) => {
@@ -294,15 +297,30 @@ class BackupLocalDataSource {
       final settingsData = data['club_settings'] as Map<String, dynamic>?;
       if (settingsData != null) {
         final existing = await (_database.select(_database.clubSettings)..limit(1)).getSingleOrNull();
+        final clubName = settingsData['club_name'] as String? ?? existing?.clubName;
+        final logoPath = settingsData['logo_path'] as String? ?? existing?.logoPath;
+        final primaryColorHex = settingsData['primary_color_hex'] as String?;
+
         if (existing != null) {
           await (_database.update(_database.clubSettings)..where((tbl) => tbl.id.equals(1))).write(
             ClubSettingsCompanion(
-              clubName: Value(settingsData['club_name'] as String? ?? existing.clubName),
+              clubName: Value(clubName ?? existing.clubName),
               season: Value(settingsData['season'] as String? ?? existing.season),
               adminName: Value(settingsData['admin_name'] as String? ?? existing.adminName),
               managerName: Value(settingsData['manager_name'] as String? ?? existing.managerName),
+              logoPath: Value(logoPath),
             ),
           );
+        }
+
+        if (clubName != null && clubName.isNotEmpty) {
+          ClubThemeService.instance.updateClubName(clubName);
+        }
+        if (primaryColorHex != null && primaryColorHex.isNotEmpty) {
+          ClubThemeService.instance.updatePrimaryColor(ClubThemeService.parseColorHex(primaryColorHex));
+        }
+        if (logoPath != null && logoPath.isNotEmpty) {
+          ClubThemeService.instance.updateLogoPath(logoPath);
         }
       }
 
