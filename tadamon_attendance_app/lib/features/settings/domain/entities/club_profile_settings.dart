@@ -8,6 +8,9 @@ class ClubProfileSettings {
     this.isPinLockEnabled = true,
     this.reportsExportPath,
     this.autoShareOnExport = true,
+    this.logoPath,
+    this.primaryColorHex,
+    this.identityDocPath,
   });
 
   final String clubName;
@@ -18,6 +21,9 @@ class ClubProfileSettings {
   final bool isPinLockEnabled;
   final String? reportsExportPath;
   final bool autoShareOnExport;
+  final String? logoPath;
+  final String? primaryColorHex;
+  final String? identityDocPath;
 
   ClubProfileSettings copyWith({
     String? clubName,
@@ -28,6 +34,9 @@ class ClubProfileSettings {
     bool? isPinLockEnabled,
     String? reportsExportPath,
     bool? autoShareOnExport,
+    String? logoPath,
+    String? primaryColorHex,
+    String? identityDocPath,
   }) {
     return ClubProfileSettings(
       clubName: clubName ?? this.clubName,
@@ -38,6 +47,9 @@ class ClubProfileSettings {
       isPinLockEnabled: isPinLockEnabled ?? this.isPinLockEnabled,
       reportsExportPath: reportsExportPath ?? this.reportsExportPath,
       autoShareOnExport: autoShareOnExport ?? this.autoShareOnExport,
+      logoPath: logoPath ?? this.logoPath,
+      primaryColorHex: primaryColorHex ?? this.primaryColorHex,
+      identityDocPath: identityDocPath ?? this.identityDocPath,
     );
   }
 }

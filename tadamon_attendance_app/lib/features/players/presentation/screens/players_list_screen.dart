@@ -424,7 +424,7 @@ class _PlayersListScreenState extends State<PlayersListScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.royalBlue),
+                    borderSide: BorderSide(color: AppColors.royalBlue),
                   ),
                 ),
               ),

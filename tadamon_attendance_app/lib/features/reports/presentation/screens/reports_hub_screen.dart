@@ -966,7 +966,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                         color: AppColors.royalBlue.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(LucideIcons.calendar, size: 18, color: AppColors.royalBlue),
+                      child: Icon(LucideIcons.calendar, size: 18, color: AppColors.royalBlue),
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -994,7 +994,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                   color: const Color(0xFFEFF6FF),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(LucideIcons.calendarCheck, size: 18, color: AppColors.royalBlue),
+                child: Icon(LucideIcons.calendarCheck, size: 18, color: AppColors.royalBlue),
               ),
               title: const Text(
                 'اختيار يوم محدد',
@@ -1382,8 +1382,8 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
             const SizedBox(height: 14),
             OutlinedButton.icon(
               onPressed: _clearAllFilters,
-              icon: const Icon(LucideIcons.rotateCcw, size: 14, color: AppColors.royalBlue),
-              label: const Text(
+              icon: Icon(LucideIcons.rotateCcw, size: 14, color: AppColors.royalBlue),
+              label: Text(
                 'عرض كافة تمارين الشهر',
                 style: TextStyle(
                   fontFamily: 'Cairo',
@@ -1393,7 +1393,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                 ),
               ),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.royalBlue),
+                side: BorderSide(color: AppColors.royalBlue),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
@@ -3094,7 +3094,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.royalBlue,
-                    side: const BorderSide(color: AppColors.royalBlue),
+                    side: BorderSide(color: AppColors.royalBlue),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -3214,7 +3214,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                             ],
                           ),
                           if (_selectedTeamId == squad['id'])
-                            const Icon(LucideIcons.checkCircle2, color: AppColors.royalBlue, size: 20),
+                            Icon(LucideIcons.checkCircle2, color: AppColors.royalBlue, size: 20),
                         ],
                       ),
                     ),
@@ -3318,7 +3318,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                             ],
                           ),
                           if (_selectedYear == m['year'] && _selectedMonth == m['month'])
-                            const Icon(LucideIcons.checkCircle2, color: AppColors.royalBlue, size: 20),
+                            Icon(LucideIcons.checkCircle2, color: AppColors.royalBlue, size: 20),
                         ],
                       ),
                     ),

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:tadamon_attendance_app/core/theme/club_theme_service.dart';
 import 'package:tadamon_attendance_app/core/widgets/attendance_badge.dart';
 import 'package:tadamon_attendance_app/features/reports/domain/entities/admin_summary_report.dart';
 import 'package:tadamon_attendance_app/features/reports/domain/entities/monthly_attendance_sheet.dart';
@@ -17,6 +18,10 @@ class PdfReportEngine {
   final List<int>? customBoldFontBytes;
 
   static const PdfColor royalBlue = PdfColor.fromInt(0xFF0E4B94);
+  static PdfColor get primaryPdfColor {
+    final c = ClubThemeService.instance.currentColor;
+    return PdfColor(c.r, c.g, c.b);
+  }
   static const PdfColor navyDark = PdfColor.fromInt(0xFF0A2540);
   static const PdfColor goldAccent = PdfColor.fromInt(0xFFD97706);
   static const PdfColor lightBg = PdfColor.fromInt(0xFFF8FAFC);
@@ -41,6 +46,17 @@ class PdfReportEngine {
   }
 
   Future<pw.MemoryImage?> _loadLogo() async {
+    final customLogo = ClubThemeService.instance.currentLogoPath;
+    if (customLogo != null && customLogo.isNotEmpty) {
+      try {
+        final file = File(customLogo);
+        if (file.existsSync()) {
+          final fileBytes = await file.readAsBytes();
+          return pw.MemoryImage(fileBytes);
+        }
+      } catch (_) {}
+    }
+
     try {
       final bytes = await rootBundle.load('assets/images/main_logo.png');
       return pw.MemoryImage(bytes.buffer.asUint8List());

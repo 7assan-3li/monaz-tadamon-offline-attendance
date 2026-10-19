@@ -1,10 +1,40 @@
 import 'package:flutter/material.dart';
 
 abstract final class AppColors {
-  /// اللون الأزرق الرسمي المعتمد من شعار نادي تضامن حضرموت (#0F48A2)
+  /// اللون الأزرق الملكي المعتمد لنادي تضامن حضرموت (#0F48A2)
   static const Color royalBlue = Color(0xFF0F48A2);
   static const Color royalBlueDark = Color(0xFF0A3A85);
   static const Color interactionBlue = Color(0xFF1B59BF);
+
+  static Color _primary = royalBlue;
+  static Color _primaryDark = royalBlueDark;
+  static Color _interaction = interactionBlue;
+
+  /// اللون الأساسي للنادي المعتمد حالياً (ديناميكي بحسب الثيم المختار)
+  static Color get primary => _primary;
+  static Color get primaryDark => _primaryDark;
+  static Color get interaction => _interaction;
+
+  /// تحديث لون وهوية النادي في كافة واجهات النظام
+  static void applyThemeColor(Color primary, {Color? dark, Color? interaction}) {
+    _primary = primary;
+    final hsl = HSLColor.fromColor(primary);
+    _primaryDark = dark ??
+        hsl
+            .withLightness((hsl.lightness - 0.10).clamp(0.0, 1.0))
+            .toColor();
+    _interaction = interaction ??
+        hsl
+            .withLightness((hsl.lightness + 0.08).clamp(0.0, 1.0))
+            .toColor();
+  }
+
+  /// استعادة الهوية الرسمية الافتراضية لنادي تضامن حضرموت
+  static void resetToDefault() {
+    _primary = royalBlue;
+    _primaryDark = royalBlueDark;
+    _interaction = interactionBlue;
+  }
 
   static const Color canvas = Color(0xFFF8FAFC);
   static const Color surface = Color(0xFFFFFFFF);

@@ -28,6 +28,8 @@ import 'package:tadamon_attendance_app/features/teams/presentation/bloc/active_t
 import 'package:tadamon_attendance_app/features/reports/presentation/bloc/reports_bloc.dart';
 import 'package:tadamon_attendance_app/features/reports/presentation/screens/reports_hub_screen.dart';
 
+import 'package:tadamon_attendance_app/core/theme/club_theme_service.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeCoreDependencies();
@@ -39,6 +41,24 @@ Future<void> main() async {
   configureActivationDependencies(currentDeviceId: deviceId);
   configureAttendanceDependencies();
   configureSyncDependencies();
+
+  // Load custom club theme & logo settings
+  try {
+    final settingsRepo = serviceLocator<SettingsRepository>();
+    final settings = await settingsRepo.read();
+    if (settings.primaryColorHex != null && settings.primaryColorHex!.isNotEmpty) {
+      ClubThemeService.instance.setPrimaryColor(
+        ClubThemeService.parseColorHex(settings.primaryColorHex),
+      );
+    }
+    if (settings.logoPath != null && settings.logoPath!.isNotEmpty) {
+      ClubThemeService.instance.setLogoPath(settings.logoPath);
+    }
+    if (settings.clubName.isNotEmpty) {
+      ClubThemeService.instance.setClubName(settings.clubName);
+    }
+  } catch (_) {}
+
   final storedLicense = await serviceLocator<ActivationRepository>()
       .readActivatedLicense();
   var clockTampered = false;
@@ -76,14 +96,19 @@ class MyApp extends StatelessWidget {
 
     return BlocProvider<ActiveTeamCubit>.value(
       value: activeTeamCubit,
-      child: MaterialApp(
-        title: 'تحضير نادي تضامن حضرموت',
-        theme: AppTheme.light,
-        builder: (context, child) => Directionality(
-          textDirection: TextDirection.rtl,
-          child: child ?? const SizedBox.shrink(),
-        ),
-        home: home,
+      child: ValueListenableBuilder<Color>(
+        valueListenable: ClubThemeService.instance.primaryColorNotifier,
+        builder: (context, primaryColor, _) {
+          return MaterialApp(
+            title: 'تحضير ${ClubThemeService.instance.currentClubName}',
+            theme: AppTheme.buildTheme(primaryColor),
+            builder: (context, child) => Directionality(
+              textDirection: TextDirection.rtl,
+              child: child ?? const SizedBox.shrink(),
+            ),
+            home: home,
+          );
+        },
       ),
     );
   }

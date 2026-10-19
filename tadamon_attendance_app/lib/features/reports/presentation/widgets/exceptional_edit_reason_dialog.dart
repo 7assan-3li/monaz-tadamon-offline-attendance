@@ -54,7 +54,7 @@ class _ExceptionalEditReasonDialogState
           children: [
             Row(
               children: [
-                const Icon(Icons.shield_outlined, color: AppColors.royalBlue),
+                Icon(Icons.shield_outlined, color: AppColors.royalBlue),
                 const SizedBox(width: 8),
                 Text(
                   'تعديل استثنائي لحالة اللاعب',

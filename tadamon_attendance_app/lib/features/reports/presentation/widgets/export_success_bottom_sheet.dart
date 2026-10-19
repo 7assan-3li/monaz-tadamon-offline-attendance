@@ -199,7 +199,7 @@ class ExportSuccessBottomSheet extends StatelessWidget {
                     height: 44,
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.royalBlue),
+                        side: BorderSide(color: AppColors.royalBlue),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -207,7 +207,7 @@ class ExportSuccessBottomSheet extends StatelessWidget {
                       onPressed: () {
                         storageService.openReportFile(filePath);
                       },
-                      icon: const Icon(LucideIcons.externalLink, size: 16, color: AppColors.royalBlue),
+                      icon: Icon(LucideIcons.externalLink, size: 16, color: AppColors.royalBlue),
                       label: const Text(
                         'فتح ومعاينة',
                         style: TextStyle(

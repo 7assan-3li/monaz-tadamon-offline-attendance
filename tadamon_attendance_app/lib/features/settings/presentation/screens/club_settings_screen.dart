@@ -12,6 +12,16 @@ import 'package:tadamon_attendance_app/features/settings/domain/entities/club_pr
 import 'package:tadamon_attendance_app/features/settings/domain/repositories/settings_repository.dart';
 import 'package:tadamon_attendance_app/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:tadamon_attendance_app/features/settings/presentation/widgets/pin_pad_modal.dart';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:tadamon_attendance_app/core/theme/club_theme_service.dart';
+import 'package:tadamon_attendance_app/core/widgets/club_logo_widget.dart';
+import 'package:tadamon_attendance_app/features/backup/domain/services/backup_file_service.dart';
+import 'package:tadamon_attendance_app/features/backup/domain/usecases/create_backup_use_case.dart';
+import 'package:tadamon_attendance_app/features/backup/domain/usecases/restore_backup_use_case.dart';
 import 'package:tadamon_attendance_app/features/teams/presentation/screens/teams_screen.dart';
 
 class ClubSettingsScreen extends StatelessWidget {
@@ -85,12 +95,10 @@ class ClubSettingsScreen extends StatelessWidget {
               color: Colors.white,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Image.asset(
-              'assets/images/main_logo.png',
+            child: const ClubLogoWidget(
               width: 30,
               height: 32,
               fit: BoxFit.contain,
-              semanticLabel: 'شعار نادي تضامن حضرموت',
             ),
           ),
           const SizedBox(width: 8),
@@ -99,46 +107,39 @@ class ClubSettingsScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  children: [
-                    const Text(
-                      'تضامن حضرموت',
-                      style: TextStyle(
+                ValueListenableBuilder<String>(
+                  valueListenable: ClubThemeService.instance.clubNameNotifier,
+                  builder: (context, clubName, _) {
+                    return Text(
+                      clubName,
+                      style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
-                    ),
-                    const SizedBox(width: 5),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 5,
-                        vertical: 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text(
-                        'المعتمد',
-                        style: TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF38BDF8),
-                        ),
-                      ),
-                    ),
-                  ],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    );
+                  },
                 ),
-                const Text(
-                  'تحضير نادي تضامن حضرموت',
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 10,
-                    color: Color(0xFF93C5FD),
-                  ),
+                ValueListenableBuilder<String>(
+                  valueListenable: ClubThemeService.instance.clubNameNotifier,
+                  builder: (context, clubName, _) {
+                    final subtitle = clubName.contains('نادي')
+                        ? 'تحضير $clubName'
+                        : 'تحضير نادي $clubName';
+                    return Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 10,
+                        color: Color(0xFF93C5FD),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    );
+                  },
                 ),
               ],
             ),
@@ -212,6 +213,14 @@ class _SettingsContent extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         _buildClubProfileCard(context),
+        const SizedBox(height: 16),
+        _buildSectionHeader(
+          icon: LucideIcons.palette,
+          title: 'ثيمات وألوان النادي المعتمدة',
+          iconColor: AppColors.royalBlue,
+        ),
+        const SizedBox(height: 8),
+        _buildClubThemeCard(context),
         const SizedBox(height: 16),
         _buildSectionHeader(
           icon: LucideIcons.usersRound,
@@ -571,6 +580,10 @@ class _SettingsContent extends StatelessWidget {
     final managerName = (settings.managerName?.isNotEmpty == true)
         ? settings.managerName!
         : 'المدير الفني المعتمد';
+    final hasCustomLogo =
+        settings.logoPath != null && settings.logoPath!.isNotEmpty;
+    final hasIdentityDoc = settings.identityDocPath != null &&
+        settings.identityDocPath!.isNotEmpty;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -585,15 +598,17 @@ class _SettingsContent extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: 48,
+                height: 48,
                 padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.borderSubtle),
                 ),
-                child: Image.asset(
-                  'assets/images/main_logo.png',
+                child: const ClubLogoWidget(
+                  width: 42,
+                  height: 42,
                   fit: BoxFit.contain,
                 ),
               ),
@@ -606,7 +621,7 @@ class _SettingsContent extends StatelessWidget {
                       clubName,
                       style: const TextStyle(
                         fontFamily: 'Cairo',
-                        fontSize: 13,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
                       ),
@@ -628,16 +643,17 @@ class _SettingsContent extends StatelessWidget {
                 onPressed: () => _openEditClubProfileModal(context),
                 icon: const Icon(LucideIcons.pencil, size: 14),
                 label: const Text(
-                  'تعديل',
+                  'تعديل البيانات',
                   style: TextStyle(
                     fontFamily: 'Cairo',
-                    fontSize: 12,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.royalBlue,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   backgroundColor: AppColors.royalBlue.withValues(alpha: 0.08),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -705,6 +721,323 @@ class _SettingsContent extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          const Divider(),
+          const SizedBox(height: 8),
+
+          // Actions for Club Logo & Identity Document
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _pickClubLogo(context),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textPrimary,
+                    side: const BorderSide(color: AppColors.borderSubtle),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: Icon(LucideIcons.image,
+                      size: 14, color: AppColors.royalBlue),
+                  label: const Text(
+                    'تغيير الشعار (صورة)',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _pickClubIdentityDocument(context),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textPrimary,
+                    side: const BorderSide(color: AppColors.borderSubtle),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(LucideIcons.fileText,
+                      size: 14, color: Color(0xFF0284C7)),
+                  label: const Text(
+                    'رفع وثيقة الهوية (PDF)',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          if (hasCustomLogo) ...[
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => _resetClubLogo(context),
+                icon: const Icon(LucideIcons.rotateCcw,
+                    size: 13, color: AppColors.textSecondary),
+                label: const Text(
+                  'استعادة الشعار الافتراضي لنادي تضامن حضرموت',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 10.5,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ),
+          ],
+
+          if (hasIdentityDoc) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF86EFAC)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(LucideIcons.fileCheck,
+                      size: 16, color: Color(0xFF16A34A)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'وثيقة الهوية: ${p.basename(settings.identityDocPath!)}',
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF14532D),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => OpenFilex.open(settings.identityDocPath!),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      minimumSize: Size.zero,
+                    ),
+                    child: const Text(
+                      'معاينة',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF16A34A),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => _removeClubIdentityDocument(context),
+                    icon: const Icon(LucideIcons.trash2,
+                        size: 14, color: AppColors.unexcused),
+                    tooltip: 'إزالة الوثيقة',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildClubThemeCard(BuildContext context) {
+    final activeHex = settings.primaryColorHex?.toUpperCase() ?? '#0F48A2';
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: AppColors.royalBlue,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'اختر الهوية اللونية المعتمدة للنادي',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.sessionBackground,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  activeHex,
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.royalBlue,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'حدد ثيم ناديك الرياضي لتغيير كافة واجهات التطبيق، الشريط العلوي، والأزرار والتقارير تلقائياً:',
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 11,
+              color: AppColors.textSecondary,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final preset in kClubThemePresets) ...[
+                InkWell(
+                  onTap: () => _applyThemePreset(context, preset),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: preset.hex.toUpperCase() == activeHex
+                          ? preset.primaryColor.withValues(alpha: 0.12)
+                          : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: preset.hex.toUpperCase() == activeHex
+                            ? preset.primaryColor
+                            : AppColors.borderSubtle,
+                        width:
+                            preset.hex.toUpperCase() == activeHex ? 1.8 : 1.0,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: preset.primaryColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1.5),
+                            boxShadow: const [
+                              BoxShadow(
+                                  color: Color(0x20000000), blurRadius: 2),
+                            ],
+                          ),
+                          child: preset.hex.toUpperCase() == activeHex
+                              ? const Icon(Icons.check,
+                                  size: 10, color: Colors.white)
+                              : null,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          preset.name,
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 11,
+                            fontWeight: preset.hex.toUpperCase() == activeHex
+                                ? FontWeight.bold
+                                : FontWeight.w600,
+                            color: preset.hex.toUpperCase() == activeHex
+                                ? preset.primaryColor
+                                : AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 14),
+          const Divider(),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _openCustomColorModal(context),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 9, horizontal: 10),
+                    side: const BorderSide(color: AppColors.borderSubtle),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(LucideIcons.pipette,
+                      size: 15, color: AppColors.textSecondary),
+                  label: const Text(
+                    'تخصيص لون مخصص (HEX)',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (activeHex != '#0F48A2')
+                TextButton.icon(
+                  onPressed: () => _resetThemeColor(context),
+                  style: TextButton.styleFrom(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                  icon: const Icon(LucideIcons.rotateCcw,
+                      size: 14, color: AppColors.textSecondary),
+                  label: const Text(
+                    'استعادة أزرق التضامن',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );
@@ -770,7 +1103,7 @@ class _SettingsContent extends StatelessWidget {
                   side: const BorderSide(color: AppColors.borderSubtle),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                icon: const Icon(LucideIcons.copy, size: 13, color: AppColors.royalBlue),
+                icon: Icon(LucideIcons.copy, size: 13, color: AppColors.royalBlue),
                 label: const Text(
                   'نسخ',
                   style: TextStyle(
@@ -853,7 +1186,7 @@ class _SettingsContent extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const Icon(LucideIcons.keyRound, size: 16, color: AppColors.royalBlue),
+                      Icon(LucideIcons.keyRound, size: 16, color: AppColors.royalBlue),
                       const SizedBox(width: 8),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -980,12 +1313,22 @@ class _SettingsContent extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 10),
+          const Text(
+            'تصدير واستيراد قاعدة البيانات كملف موثق رقمياً (.monaz) لنقل كافة الفرق والتمارين واللاعبين بين الأجهزة أوفلاين:',
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 11,
+              color: AppColors.textSecondary,
+              height: 1.4,
+            ),
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () => _openBackupScreen(context),
+                  onPressed: () => _exportBackupFile(context),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.royalBlue,
                     foregroundColor: Colors.white,
@@ -995,9 +1338,9 @@ class _SettingsContent extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  icon: const Icon(LucideIcons.save, size: 15),
+                  icon: const Icon(LucideIcons.fileUp, size: 15),
                   label: const Text(
-                    'تصدير نسخة احتياطية',
+                    'تصدير ملف (.monaz)',
                     style: TextStyle(
                       fontFamily: 'Cairo',
                       fontSize: 11.5,
@@ -1009,7 +1352,7 @@ class _SettingsContent extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => _openBackupScreen(context),
+                  onPressed: () => _importBackupFile(context),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.textPrimary,
                     side: const BorderSide(color: AppColors.borderSubtle),
@@ -1018,9 +1361,9 @@ class _SettingsContent extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  icon: const Icon(LucideIcons.rotateCcw, size: 15),
+                  icon: const Icon(LucideIcons.fileDown, size: 15, color: Color(0xFF0284C7)),
                   label: const Text(
-                    'استعادة نسخة',
+                    'استيراد من ملف',
                     style: TextStyle(
                       fontFamily: 'Cairo',
                       fontSize: 11.5,
@@ -1030,6 +1373,22 @@ class _SettingsContent extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton.icon(
+              onPressed: () => _openBackupScreen(context),
+              icon: const Icon(LucideIcons.layers, size: 14, color: AppColors.textSecondary),
+              label: const Text(
+                'عرض سجل النسخ الاحتياطية وإدارتها المتقدمة...',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -1154,7 +1513,7 @@ class _SettingsContent extends StatelessWidget {
             runSpacing: 6,
             children: [
               ActionChip(
-                avatar: const Icon(LucideIcons.downloadCloud, size: 14, color: AppColors.royalBlue),
+                avatar: Icon(LucideIcons.downloadCloud, size: 14, color: AppColors.royalBlue),
                 label: const Text('التنزيلات (Downloads)', style: TextStyle(fontFamily: 'Cairo', fontSize: 10.5)),
                 backgroundColor: AppColors.canvas,
                 side: const BorderSide(color: AppColors.borderSubtle),
@@ -1461,17 +1820,20 @@ class _SettingsContent extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () {
+                    final newClubName = clubController.text.trim();
                     context.read<SettingsBloc>().add(
                           SettingsSaved(
-                            ClubProfileSettings(
-                              clubName: clubController.text.trim(),
+                            settings.copyWith(
+                              clubName: newClubName,
                               season: seasonController.text.trim(),
                               adminName: adminController.text.trim(),
                               managerName: managerController.text.trim(),
-                              hasPin: settings.hasPin,
                             ),
                           ),
                         );
+                    if (newClubName.isNotEmpty) {
+                      ClubThemeService.instance.updateClubName(newClubName);
+                    }
                     Navigator.of(bottomSheetContext).pop();
                   },
                   style: ElevatedButton.styleFrom(
@@ -1546,5 +1908,394 @@ class _SettingsContent extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _pickClubLogo(BuildContext context) async {
+    try {
+      final picked = await FilePicker.pickFile(
+        type: FileType.custom,
+        allowedExtensions: ['png', 'jpg', 'jpeg', 'webp'],
+      );
+      if (picked == null || picked.path == null) return;
+
+      final originalPath = picked.path!;
+
+      final docsDir = await getApplicationDocumentsDirectory();
+      final logosDir = Directory(p.join(docsDir.path, 'club_branding'));
+      if (!await logosDir.exists()) {
+        await logosDir.create(recursive: true);
+      }
+
+      final ext = p.extension(originalPath);
+      final destPath = p.join(
+        logosDir.path,
+        'club_logo_${DateTime.now().millisecondsSinceEpoch}$ext',
+      );
+      await File(originalPath).copy(destPath);
+
+      if (context.mounted) {
+        context.read<SettingsBloc>().add(
+              SettingsSaved(settings.copyWith(logoPath: destPath)),
+            );
+        ClubThemeService.instance.updateLogoPath(destPath);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'تم تحديث وتثبيت شعار النادي بنجاح',
+              style: TextStyle(fontFamily: 'Cairo'),
+            ),
+            backgroundColor: AppColors.present,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'تعذر اختيار الشعار: $e',
+              style: const TextStyle(fontFamily: 'Cairo'),
+            ),
+            backgroundColor: AppColors.unexcused,
+          ),
+        );
+      }
+    }
+  }
+
+  void _resetClubLogo(BuildContext context) {
+    context.read<SettingsBloc>().add(
+          SettingsSaved(settings.copyWith(logoPath: '')),
+        );
+    ClubThemeService.instance.updateLogoPath(null);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'تمت استعادة الشعار الافتراضي لنادي تضامن حضرموت',
+          style: TextStyle(fontFamily: 'Cairo'),
+        ),
+        backgroundColor: AppColors.royalBlue,
+      ),
+    );
+  }
+
+  Future<void> _pickClubIdentityDocument(BuildContext context) async {
+    try {
+      final picked = await FilePicker.pickFile(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'png', 'jpg'],
+      );
+      if (picked == null || picked.path == null) return;
+
+      final originalPath = picked.path!;
+
+      final docsDir = await getApplicationDocumentsDirectory();
+      final docsFolder = Directory(p.join(docsDir.path, 'club_documents'));
+      if (!await docsFolder.exists()) {
+        await docsFolder.create(recursive: true);
+      }
+
+      final ext = p.extension(originalPath);
+      final destPath = p.join(
+        docsFolder.path,
+        'identity_doc_${DateTime.now().millisecondsSinceEpoch}$ext',
+      );
+      await File(originalPath).copy(destPath);
+
+      if (context.mounted) {
+        context.read<SettingsBloc>().add(
+              SettingsSaved(settings.copyWith(identityDocPath: destPath)),
+            );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'تم حفظ وإرفاق وثيقة الهوية والاعتماد الرسمية',
+              style: TextStyle(fontFamily: 'Cairo'),
+            ),
+            backgroundColor: AppColors.present,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'تعذر إرفاق الوثيقة: $e',
+              style: const TextStyle(fontFamily: 'Cairo'),
+            ),
+            backgroundColor: AppColors.unexcused,
+          ),
+        );
+      }
+    }
+  }
+
+  void _removeClubIdentityDocument(BuildContext context) {
+    context.read<SettingsBloc>().add(
+          SettingsSaved(settings.copyWith(identityDocPath: '')),
+        );
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'تمت إزالة وثيقة الهوية بنجاح',
+          style: TextStyle(fontFamily: 'Cairo'),
+        ),
+      ),
+    );
+  }
+
+  void _applyThemePreset(BuildContext context, ClubThemePreset preset) {
+    ClubThemeService.instance.updatePrimaryColor(preset.primaryColor);
+    context.read<SettingsBloc>().add(
+          SettingsSaved(settings.copyWith(primaryColorHex: preset.hex)),
+        );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'تم تفعيل ثيم: ${preset.name} بنجاح',
+          style: const TextStyle(fontFamily: 'Cairo'),
+        ),
+        backgroundColor: preset.primaryColor,
+      ),
+    );
+  }
+
+  void _resetThemeColor(BuildContext context) {
+    ClubThemeService.instance.resetToDefault();
+    context.read<SettingsBloc>().add(
+          SettingsSaved(settings.copyWith(primaryColorHex: '#0F48A2')),
+        );
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'تمت استعادة الهوية اللونية الرسمية (أزرق تضامن حضرموت)',
+          style: TextStyle(fontFamily: 'Cairo'),
+        ),
+        backgroundColor: AppColors.royalBlue,
+      ),
+    );
+  }
+
+  void _openCustomColorModal(BuildContext context) {
+    final hexController = TextEditingController(
+      text: settings.primaryColorHex ?? '#0F48A2',
+    );
+    Color previewColor = AppColors.primary;
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setStateModal) => AlertDialog(
+          title: const Text(
+            'تخصيص لون الهوية للنادي',
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'أدخل كود اللون بنظام HEX (مثال: #0F48A2 أو #047857):',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: previewColor,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.borderSubtle),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: hexController,
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: '#0F48A2',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 8),
+                      ),
+                      onChanged: (val) {
+                        try {
+                          final parsed = ClubThemeService.colorFromHex(val);
+                          setStateModal(() {
+                            previewColor = parsed;
+                          });
+                        } catch (_) {}
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(),
+              child: const Text('إلغاء', style: TextStyle(fontFamily: 'Cairo')),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: previewColor,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                final cleanHex = hexController.text.trim();
+                try {
+                  final color = ClubThemeService.colorFromHex(cleanHex);
+                  ClubThemeService.instance.updatePrimaryColor(color);
+                  context.read<SettingsBloc>().add(
+                        SettingsSaved(
+                            settings.copyWith(primaryColorHex: cleanHex)),
+                      );
+                  Navigator.of(dialogCtx).pop();
+                } catch (_) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'كود HEX غير صالح. تأكد من إدخال صيغة مثل #0F48A2',
+                        style: TextStyle(fontFamily: 'Cairo'),
+                      ),
+                      backgroundColor: AppColors.unexcused,
+                    ),
+                  );
+                }
+              },
+              child: const Text(
+                'تطبيق اللون',
+                style: TextStyle(fontFamily: 'Cairo', color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _exportBackupFile(BuildContext context) async {
+    try {
+      final createUseCase = serviceLocator<CreateBackupUseCase>();
+      final package = await createUseCase();
+      final file = await BackupFileService.exportToFile(package);
+      if (!context.mounted) return;
+
+      await BackupFileService.shareBackupFile(file, clubName: package.manifest.clubName);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم تصدير ملف النسخة الاحتياطية بنجاح جاهز للمشاركة',
+              style: TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: AppColors.present,
+        ),
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ أثناء التصدير: $e',
+                style: const TextStyle(fontFamily: 'Cairo')),
+            backgroundColor: AppColors.unexcused,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _importBackupFile(BuildContext context) async {
+    try {
+      final content = await BackupFileService.pickAndReadBackupFile();
+      if (content == null || !context.mounted) return;
+
+      final restoreUseCase = serviceLocator<RestoreBackupUseCase>();
+      final verification = await restoreUseCase.verify(content);
+
+      if (!context.mounted) return;
+
+      if (!verification.isValid || verification.manifest == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'الملف غير صالح أو تم التلاعب به: ${verification.errorMessage ?? "فشل التحقق من ختم الحزمة"}',
+              style: const TextStyle(fontFamily: 'Cairo'),
+            ),
+            backgroundColor: AppColors.unexcused,
+          ),
+        );
+        return;
+      }
+
+      final manifest = verification.manifest!;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('تأكيد استعادة بيانات النادي',
+              style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+          content: Text(
+            'تم التحقق من ختم الحزمة بنجاح:\n'
+            '• النادي: ${manifest.clubName}\n'
+            '• إصدار النظام: ${manifest.appVersion}\n'
+            '• اللاعبين: ${manifest.tableCounts['players'] ?? 0}\n'
+            '• التمارين: ${manifest.tableCounts['sessions'] ?? 0}\n\n'
+            'تحذير: سيتم استبدال البيانات الحالية ببيانات النسخة المستوردة (الترخيص وساعة النظام محمية تلقائياً).',
+            style: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('إلغاء', style: TextStyle(fontFamily: 'Cairo')),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.royalBlue),
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('استعادة الآن',
+                  style: TextStyle(fontFamily: 'Cairo', color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed == true && context.mounted) {
+        await restoreUseCase(content);
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تمت استعادة كافة البيانات بنجاح!',
+                style: TextStyle(fontFamily: 'Cairo')),
+            backgroundColor: AppColors.present,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ أثناء الاستيراد: $e',
+                style: const TextStyle(fontFamily: 'Cairo')),
+            backgroundColor: AppColors.unexcused,
+          ),
+        );
+      }
+    }
   }
 }

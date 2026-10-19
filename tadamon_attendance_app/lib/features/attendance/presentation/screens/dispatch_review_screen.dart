@@ -251,12 +251,12 @@ class DispatchReviewScreen extends StatelessWidget {
                         onPressed: onStartAnotherSession,
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size.fromHeight(48),
-                          side: const BorderSide(color: AppColors.royalBlue),
+                          side: BorderSide(color: AppColors.royalBlue),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        icon: const Icon(
+                        icon: Icon(
                           LucideIcons.plusCircle,
                           size: 18,
                           color: AppColors.royalBlue,

@@ -9,6 +9,7 @@ import 'package:tadamon_attendance_app/core/widgets/confirmation_dialog.dart';
 import 'package:tadamon_attendance_app/features/backup/presentation/bloc/backup_bloc.dart';
 import 'package:tadamon_attendance_app/features/backup/presentation/bloc/backup_event.dart';
 import 'package:tadamon_attendance_app/features/backup/presentation/bloc/backup_state.dart';
+import 'package:tadamon_attendance_app/features/backup/domain/services/backup_file_service.dart';
 
 class BackupScreen extends StatefulWidget {
   const BackupScreen({super.key});
@@ -197,6 +198,17 @@ class _BackupScreenState extends State<BackupScreen> {
                                 color: AppColors.textPrimary,
                               ),
                             ),
+                            const SizedBox(height: 10),
+                            AppButton(
+                              label: 'حفظ ومشاركة كملف (.monaz)',
+                              leadingIcon: LucideIcons.share2,
+                              variant: AppButtonVariant.primary,
+                              onPressed: () async {
+                                final file = await BackupFileService.exportToFile(state.package);
+                                if (!mounted) return;
+                                await BackupFileService.shareBackupFile(file, clubName: state.package.manifest.clubName);
+                              },
+                            ),
                           ],
                         ),
                       ),
@@ -216,7 +228,7 @@ class _BackupScreenState extends State<BackupScreen> {
                         Icon(LucideIcons.history, size: 20, color: AppColors.excused),
                         SizedBox(width: 8),
                         Text(
-                          'استعادة نسخة احتياطية من USB',
+                          'استعادة نسخة احتياطية من ملف (USB أو الذاكرة)',
                           style: TextStyle(
                             fontFamily: 'Cairo',
                             fontSize: 14,
@@ -228,12 +240,41 @@ class _BackupScreenState extends State<BackupScreen> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'الصق محتوى ملف النسخة الاحتياطية لفحص تطابقه الرقمي واستعادة البيانات:',
+                      'اختر ملف النسخة الاحتياطية (.monaz) من جهازك مباشرة لفحص الختم واستعادة البيانات:',
                       style: TextStyle(
                         fontFamily: 'Cairo',
                         fontSize: 12,
                         color: AppColors.textSecondary,
                       ),
+                    ),
+                    const SizedBox(height: 12),
+                    AppButton(
+                      label: 'اختيار ملف نسخة احتياطية من الجهاز (.monaz)',
+                      leadingIcon: LucideIcons.folderOpen,
+                      variant: AppButtonVariant.primary,
+                      onPressed: () async {
+                        final backupBloc = context.read<BackupBloc>();
+                        final content = await BackupFileService.pickAndReadBackupFile();
+                        if (!mounted) return;
+                        if (content != null) {
+                          _restorePayloadController.text = content;
+                          backupBloc.add(VerifyBackupRequestedEvent(content));
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    const Row(
+                      children: [
+                        Expanded(child: Divider()),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8),
+                          child: Text(
+                            'أو لصق المحتوى النصي يدوياً',
+                            style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: AppColors.textSecondary),
+                          ),
+                        ),
+                        Expanded(child: Divider()),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     TextField(
