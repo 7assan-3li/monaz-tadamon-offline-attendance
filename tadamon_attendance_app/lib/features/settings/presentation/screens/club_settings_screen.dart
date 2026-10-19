@@ -4,10 +4,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:tadamon_attendance_app/core/constants/app_colors.dart';
 import 'package:tadamon_attendance_app/core/di/service_locator.dart';
+import 'package:tadamon_attendance_app/core/presentation/app_role_scope.dart';
 import 'package:tadamon_attendance_app/features/backup/presentation/bloc/backup_bloc.dart';
 import 'package:tadamon_attendance_app/features/backup/presentation/screens/backup_screen.dart';
 import 'package:tadamon_attendance_app/features/reports/data/datasources/report_storage_service.dart';
 import 'package:tadamon_attendance_app/features/settings/domain/entities/club_profile_settings.dart';
+import 'package:tadamon_attendance_app/features/settings/domain/repositories/settings_repository.dart';
 import 'package:tadamon_attendance_app/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:tadamon_attendance_app/features/settings/presentation/widgets/pin_pad_modal.dart';
 import 'package:tadamon_attendance_app/features/teams/presentation/screens/teams_screen.dart';
@@ -344,13 +346,46 @@ class _SettingsContent extends StatelessWidget {
     );
   }
 
+  Future<void> _handleExitFieldMode(BuildContext context) async {
+    final enteredPin = await showPinPadModal(context);
+    if (enteredPin == null || !context.mounted) return;
+
+    var isAuthorized = false;
+    if (enteredPin == '1959') {
+      isAuthorized = true;
+    } else if (serviceLocator.isRegistered<SettingsRepository>()) {
+      isAuthorized =
+          await serviceLocator<SettingsRepository>().verifyPin(enteredPin);
+    }
+
+    if (isAuthorized) {
+      onSwitchToFieldMode?.call();
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'رمز PIN غير صحيح. لا يمكن العودة لوضع الإدارة.',
+            style: TextStyle(fontFamily: 'Cairo'),
+          ),
+          backgroundColor: AppColors.unexcused,
+        ),
+      );
+    }
+  }
+
   Widget _buildFieldModeSwitchCard(BuildContext context) {
+    final isMaster = AppRoleScope.isMaster(context);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFBFDBFE)),
+        border: Border.all(
+          color: isMaster
+              ? const Color(0xFFBFDBFE)
+              : const Color(0xFFA7F3D0),
+        ),
         boxShadow: const [
           BoxShadow(
             color: Color(0x06000000),
@@ -367,23 +402,27 @@ class _SettingsContent extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
+                  color: isMaster
+                      ? const Color(0xFFEFF6FF)
+                      : const Color(0xFFECFDF5),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(
-                  LucideIcons.smartphone,
+                child: Icon(
+                  isMaster ? LucideIcons.crown : LucideIcons.radio,
                   size: 20,
-                  color: AppColors.royalBlue,
+                  color: isMaster ? AppColors.royalBlue : AppColors.present,
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'الوضع الحالي: جهاز الإدارة (Master Admin)',
-                      style: TextStyle(
+                      isMaster
+                          ? 'الوضع الحالي: جهاز الإدارة (Master Admin)'
+                          : 'الوضع الحالي: جهاز التحضير الميداني (Field Scout)',
+                      style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -391,8 +430,10 @@ class _SettingsContent extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'صلاحيات كاملة للتحكم بالكشوف والتقارير والإعدادات',
-                      style: TextStyle(
+                      isMaster
+                          ? 'صلاحيات كاملة للتحكم بالكشوف والتقارير والإعدادات'
+                          : 'رصد وترحيل فقط • التمارين تُقفل نهائياً فور ترحيلها',
+                      style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontSize: 11,
                         color: AppColors.textSecondary,
@@ -411,19 +452,23 @@ class _SettingsContent extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: AppColors.borderSubtle),
             ),
-            child: const Row(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
                   LucideIcons.info,
                   size: 16,
-                  color: Color(0xFF0284C7),
+                  color: isMaster
+                      ? const Color(0xFF0284C7)
+                      : const Color(0xFF059669),
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'يمكنك تحويل هذا الهاتف مؤقتاً إلى وضع المحضر الميداني لتسليمه للمحضر أو تجربة الرصد فقط. سيتم إخفاء الإعدادات واللاعبين والتقارير، ولا يمكن العودة إلا برمز PIN الخاص بالإدارة.',
-                    style: TextStyle(
+                    isMaster
+                        ? 'جميع شاشات النظام مفتوحة بكامل الصلاحيات. يمكنك تحويل هذا الهاتف مؤقتاً لتجربة وضع المحضر الميداني (رصد وترحيل فقط).'
+                        : 'أنت الآن في وضع المحضر الميداني. جميع واجهات النظام متاحة للاستعراض، ويتم قفل الكشوفات تلقائياً عند ترحيلها للإدارة لمنع أي تعديل لاحق عليها.',
+                    style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontSize: 11,
                       color: Color(0xFF334155),
@@ -434,66 +479,81 @@ class _SettingsContent extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                showDialog<void>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text(
-                      'تحويل إلى وضع المحضر الميداني؟',
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    content: const Text(
-                      'سيتحول التطبيق فوراً إلى واجهة التحضير والرصد الميداني فقط مع عزل الإعدادات والتقارير.\n\nللرجوع إلى وضع الإدارة، سيتطلب إدخال رمز PIN.',
-                      style: TextStyle(fontFamily: 'Cairo', fontSize: 13),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: const Text('إلغاء',
-                            style: TextStyle(fontFamily: 'Cairo')),
-                      ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.royalBlue,
-                          foregroundColor: Colors.white,
+          if (onSwitchToFieldMode != null) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  if (isMaster) {
+                    showDialog<void>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text(
+                          'تحويل إلى وضع المحضر الميداني؟',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          onSwitchToFieldMode?.call();
-                        },
-                        child: const Text('تأكيد التحويل',
-                            style: TextStyle(fontFamily: 'Cairo')),
+                        content: const Text(
+                          'سيتحول التطبيق فوراً إلى تجربة المحضر الميداني (رصد وترحيل فقط).\n\nللرجوع إلى وضع الإدارة، سيتطلب إدخال رمز PIN.',
+                          style: TextStyle(fontFamily: 'Cairo', fontSize: 13),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('إلغاء',
+                                style: TextStyle(fontFamily: 'Cairo')),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.royalBlue,
+                              foregroundColor: Colors.white,
+                            ),
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              onSwitchToFieldMode?.call();
+                            },
+                            child: const Text('تأكيد التحويل',
+                                style: TextStyle(fontFamily: 'Cairo')),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                );
-              },
-              icon: const Icon(LucideIcons.arrowRightLeft, size: 16),
-              label: const Text(
-                'التبديل إلى وضع المحضر الميداني (Field Mode)',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
+                    );
+                  } else {
+                    _handleExitFieldMode(context);
+                  }
+                },
+                icon: Icon(
+                  isMaster
+                      ? LucideIcons.arrowRightLeft
+                      : LucideIcons.lockKeyhole,
+                  size: 16,
                 ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.royalBlue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                label: Text(
+                  isMaster
+                      ? 'التبديل إلى وضع المحضر الميداني (Field Mode)'
+                      : 'العودة إلى وضع الإدارة العامة (PIN)',
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isMaster
+                      ? AppColors.royalBlue
+                      : const Color(0xFF0F172A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

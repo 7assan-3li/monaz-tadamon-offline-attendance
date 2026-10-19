@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:tadamon_attendance_app/core/constants/app_colors.dart';
+import 'package:tadamon_attendance_app/core/presentation/app_role_scope.dart';
 import 'package:tadamon_attendance_app/core/widgets/app_button.dart';
 import 'package:tadamon_attendance_app/core/widgets/app_card.dart';
 import 'package:tadamon_attendance_app/core/widgets/attendance_badge.dart';
@@ -113,31 +114,33 @@ class _MasterReviewApprovalScreenState
         }
       },
       builder: (context, state) {
+        final isMaster = AppRoleScope.isMaster(context);
         final auditLogs = state is ReportsLoaded ? state.auditLogs : [];
 
         return Scaffold(
           backgroundColor: AppColors.canvas,
           appBar: AppBar(
-            title: const Text(
-              'مراجعة واعتماد الكشف الميداني',
-              style: TextStyle(
+            title: Text(
+              isMaster ? 'مراجعة واعتماد الكشف الميداني' : 'استعراض كشف الحصة التدريبية',
+              style: const TextStyle(
                 fontFamily: 'Cairo',
                 fontWeight: FontWeight.bold,
               ),
             ),
             actions: [
-              IconButton(
-                icon: const Icon(LucideIcons.history),
-                tooltip: 'سجل التدقيق والتعديلات',
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          AuditLogsScreen(auditLogs: auditLogs.cast()),
-                    ),
-                  );
-                },
-              ),
+              if (isMaster)
+                IconButton(
+                  icon: const Icon(LucideIcons.history),
+                  tooltip: 'سجل التدقيق والتعديلات',
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            AuditLogsScreen(auditLogs: auditLogs.cast()),
+                      ),
+                    );
+                  },
+                ),
             ],
           ),
           body: Padding(
@@ -296,21 +299,23 @@ class _MasterReviewApprovalScreenState
                                     ),
                                   ),
                                   AttendanceBadge(status: status),
-                                  const SizedBox(width: 6),
-                                  IconButton(
-                                    icon: const Icon(
-                                      LucideIcons.pencil,
-                                      size: 16,
-                                      color: AppColors.royalBlue,
+                                  if (isMaster) ...[
+                                    const SizedBox(width: 6),
+                                    IconButton(
+                                      icon: const Icon(
+                                        LucideIcons.pencil,
+                                        size: 16,
+                                        color: AppColors.royalBlue,
+                                      ),
+                                      tooltip: 'تعديل استثنائي بمسوغ إداري',
+                                      onPressed: () => _onEditPlayer(
+                                        context,
+                                        record.playerId,
+                                        record.playerName,
+                                        status,
+                                      ),
                                     ),
-                                    tooltip: 'تعديل استثنائي بمسوغ إداري',
-                                    onPressed: () => _onEditPlayer(
-                                      context,
-                                      record.playerId,
-                                      record.playerName,
-                                      status,
-                                    ),
-                                  ),
+                                  ],
                                 ],
                               ),
                             );
@@ -354,12 +359,44 @@ class _MasterReviewApprovalScreenState
                       ],
                     ),
                   )
-                else
+                else if (isMaster)
                   AppButton(
                     label: 'اعتماد الكشف نهائياً',
                     leadingIcon: LucideIcons.checkCheck,
                     variant: AppButtonVariant.primary,
                     onPressed: () => _onApprove(context),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          LucideIcons.lock,
+                          size: 16,
+                          color: Color(0xFF64748B),
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'استعراض فقط • تعديل حروف الغياب والاعتماد خاص بإدارة النادي',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF475569),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
               ],
             ),

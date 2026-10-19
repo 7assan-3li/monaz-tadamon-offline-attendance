@@ -331,8 +331,6 @@ class _DesignSystemGalleryScreenState extends State<DesignSystemGalleryScreen> {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
-    final isMaster = AppRoleScope.isMaster(context);
-
     return AppBar(
       elevation: 0,
       backgroundColor: AppColors.royalBlue,
@@ -355,68 +353,21 @@ class _DesignSystemGalleryScreenState extends State<DesignSystemGalleryScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          Expanded(
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  children: [
-                    const Text(
-                      'تضامن حضرموت',
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 5,
-                        vertical: 1.5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isMaster
-                            ? const Color(0xFFF59E0B).withValues(alpha: 0.25)
-                            : const Color(0xFF10B981).withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(
-                          color: isMaster
-                              ? const Color(0xFFFBBF24)
-                              : const Color(0xFF34D399),
-                          width: 0.8,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            isMaster ? LucideIcons.crown : LucideIcons.radio,
-                            size: 9.5,
-                            color: isMaster
-                                ? const Color(0xFFFDE68A)
-                                : const Color(0xFFA7F3D0),
-                          ),
-                          const SizedBox(width: 3),
-                          Text(
-                            isMaster ? 'جهاز الإدارة' : 'جهاز الميدان',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              color: isMaster
-                                  ? const Color(0xFFFEF3C7)
-                                  : const Color(0xFFD1FAE5),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                Text(
+                  'تضامن حضرموت',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
-                const Text(
+                Text(
                   'تحضير نادي تضامن حضرموت',
                   style: TextStyle(
                     fontFamily: 'Cairo',

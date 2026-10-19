@@ -4,7 +4,6 @@ import 'package:tadamon_attendance_app/core/di/service_locator.dart';
 import 'package:tadamon_attendance_app/core/presentation/app_role_scope.dart';
 import 'package:tadamon_attendance_app/core/presentation/design_system_gallery_screen.dart';
 import 'package:tadamon_attendance_app/core/presentation/splash_screen.dart';
-import 'package:tadamon_attendance_app/core/routing/field_attendance_app_shell.dart';
 import 'package:tadamon_attendance_app/core/routing/master_admin_app_shell.dart';
 import 'package:tadamon_attendance_app/core/security/android_hardware_components_source.dart';
 import 'package:tadamon_attendance_app/core/security/hardware_fingerprint.dart';
@@ -115,18 +114,19 @@ class _AppBootstrapState extends State<AppBootstrap> {
   @override
   void initState() {
     super.initState();
-    if (_license?.role == ActivatedDeviceRole.masterAdmin) _prepareMaster();
+    _prepareApp();
   }
 
-  Future<void> _prepareMaster() async {
+  Future<void> _prepareApp() async {
     await configureMasterDependencies();
     final settingsRepo = serviceLocator<SettingsRepository>();
     final isPinEnabled = await settingsRepo.isPinLockEnabled();
+    final isFieldLicense = _license?.role == ActivatedDeviceRole.fieldAttendance;
     if (mounted) {
       setState(() {
         _masterReady = true;
-        _pinLockActive = isPinEnabled;
-        _isUnlocked = !isPinEnabled;
+        _pinLockActive = isFieldLicense ? false : isPinEnabled;
+        _isUnlocked = isFieldLicense ? true : !isPinEnabled;
       });
     }
   }
@@ -141,112 +141,83 @@ class _AppBootstrapState extends State<AppBootstrap> {
           deviceId: widget.deviceId,
           onActivated: (activatedLicense) {
             setState(() => _license = activatedLicense);
-            if (activatedLicense.role == ActivatedDeviceRole.masterAdmin) {
-              _prepareMaster();
-            }
+            _prepareApp();
           },
         ),
       );
     }
 
     final activeTeam = context.watch<ActiveTeamCubit>().state;
+    final isFieldAccount = license.role == ActivatedDeviceRole.fieldAttendance;
+    final isEffectiveMaster = !isFieldAccount && !_isTemporaryFieldMode;
 
-    return switch (license.role) {
-      ActivatedDeviceRole.masterAdmin =>
-        !_masterReady
-            ? const Center(child: CircularProgressIndicator())
-            : (_pinLockActive && !_isUnlocked)
-                ? AppPinLockScreen(
-                    settingsRepository: serviceLocator<SettingsRepository>(),
-                    onUnlocked: () => setState(() => _isUnlocked = true),
-                  )
-                : _isTemporaryFieldMode
-                    ? AppRoleScope(
-                        isMasterAdmin: false,
-                        child: FieldAttendanceAppShell(
-                          onExitFieldMode: () =>
-                              setState(() => _isTemporaryFieldMode = false),
-                          child: MultiBlocProvider(
-                            providers: [
-                              BlocProvider(
-                                create: (_) => serviceLocator<AttendanceBloc>()
-                                  ..add(StartTodaySessionEvent(activeTeam.teamId)),
-                              ),
-                            ],
-                            child: const FieldAttendanceFlow(
-                              initialPage: 0,
-                              showBottomNav: false,
-                            ),
-                          ),
-                        ),
-                      )
-                    : AppRoleScope(
-                        isMasterAdmin: true,
-                        child: MasterAdminAppShell(
-                          selectedIndex: _selectedIndex,
-                          onDestinationSelected: (index) =>
-                              setState(() => _selectedIndex = index),
-                          child: switch (_selectedIndex) {
-                            1 => MultiBlocProvider(
-                              providers: [
-                                BlocProvider(
-                                  create: (_) => serviceLocator<AttendanceBloc>()
-                                    ..add(StartTodaySessionEvent(activeTeam.teamId)),
-                                ),
-                              ],
-                              child: const FieldAttendanceFlow(
-                                initialPage: 1,
-                                showBottomNav: false,
-                              ),
-                            ),
-                            2 => BlocProvider(
-                              create: (_) =>
-                                  serviceLocator<PlayersBloc>()
-                                    ..add(const PlayersRequested()),
-                              child: const PlayersListScreen(),
-                            ),
-                            3 => BlocProvider(
-                              create: (_) => serviceLocator<ReportsBloc>(),
-                              child: ReportsHubScreen(
-                                onNavigateTab: (index) =>
-                                    setState(() => _selectedIndex = index),
-                              ),
-                            ),
-                            4 => MultiBlocProvider(
-                              providers: [
-                                BlocProvider(
-                                  create: (_) =>
-                                      serviceLocator<SettingsBloc>()
-                                        ..add(const SettingsRequested()),
-                                ),
-                                BlocProvider(
-                                  create: (_) =>
-                                      serviceLocator<TeamsBloc>()
-                                        ..add(const TeamsRequested()),
-                                ),
-                              ],
-                              child: ClubSettingsScreen(
-                                onSwitchToFieldMode: () => setState(
-                                    () => _isTemporaryFieldMode = true),
-                              ),
-                            ),
-                            _ => DesignSystemGalleryScreen(
-                              onNavigateTab: (index) =>
-                                  setState(() => _selectedIndex = index),
-                            ),
-                          },
-                        ),
-                      ),
-      ActivatedDeviceRole.fieldAttendance => AppRoleScope(
-        isMasterAdmin: false,
-        child: FieldAttendanceAppShell(
-          child: BlocProvider(
-            create: (_) => serviceLocator<AttendanceBloc>(),
-            child: const FieldAttendanceFlow(),
+    if (!_masterReady) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (!isFieldAccount && _pinLockActive && !_isUnlocked) {
+      return AppPinLockScreen(
+        settingsRepository: serviceLocator<SettingsRepository>(),
+        onUnlocked: () => setState(() => _isUnlocked = true),
+      );
+    }
+
+    return AppRoleScope(
+      isMasterAdmin: isEffectiveMaster,
+      child: MasterAdminAppShell(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (index) =>
+            setState(() => _selectedIndex = index),
+        child: switch (_selectedIndex) {
+          1 => MultiBlocProvider(
+            providers: [
+              BlocProvider(
+                create: (_) => serviceLocator<AttendanceBloc>()
+                  ..add(StartTodaySessionEvent(activeTeam.teamId)),
+              ),
+            ],
+            child: const FieldAttendanceFlow(
+              initialPage: 1,
+              showBottomNav: false,
+            ),
           ),
-        ),
+          2 => BlocProvider(
+            create: (_) =>
+                serviceLocator<PlayersBloc>()..add(const PlayersRequested()),
+            child: const PlayersListScreen(),
+          ),
+          3 => BlocProvider(
+            create: (_) => serviceLocator<ReportsBloc>(),
+            child: ReportsHubScreen(
+              onNavigateTab: (index) =>
+                  setState(() => _selectedIndex = index),
+            ),
+          ),
+          4 => MultiBlocProvider(
+            providers: [
+              BlocProvider(
+                create: (_) =>
+                    serviceLocator<SettingsBloc>()..add(const SettingsRequested()),
+              ),
+              BlocProvider(
+                create: (_) =>
+                    serviceLocator<TeamsBloc>()..add(const TeamsRequested()),
+              ),
+            ],
+            child: ClubSettingsScreen(
+              onSwitchToFieldMode: !isFieldAccount
+                  ? () => setState(
+                      () => _isTemporaryFieldMode = !_isTemporaryFieldMode)
+                  : null,
+            ),
+          ),
+          _ => DesignSystemGalleryScreen(
+            onNavigateTab: (index) =>
+                setState(() => _selectedIndex = index),
+          ),
+        },
       ),
-    };
+    );
   }
 }
 
