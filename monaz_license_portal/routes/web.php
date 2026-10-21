@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LicensePortalController::class, 'index'])->name('license.index');
 Route::post('/generate', [LicensePortalController::class, 'generate'])->name('license.generate');
+Route::post('/club/update', [LicensePortalController::class, 'updateClub'])->name('club.update');
+Route::delete('/devices/{id}', [LicensePortalController::class, 'deleteDevice'])->name('devices.delete');
 
 Route::get('/download/apk', function () {
     $candidates = [

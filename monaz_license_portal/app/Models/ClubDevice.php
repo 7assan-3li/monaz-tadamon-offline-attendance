@@ -18,6 +18,9 @@ class ClubDevice extends Model
         'device_id',
         'device_name',
         'role',
+        'team_name',
+        'license_code',
+        'expires_at',
         'is_active',
         'last_sync_at',
     ];
@@ -27,6 +30,7 @@ class ClubDevice extends Model
         return [
             'is_active' => 'boolean',
             'last_sync_at' => 'datetime',
+            'expires_at' => 'datetime',
         ];
     }
 

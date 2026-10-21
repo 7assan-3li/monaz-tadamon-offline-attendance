@@ -59,4 +59,43 @@ class LicensePortalTest extends TestCase
         $response = $this->get('/download/offline-tool');
         $this->assertContains($response->getStatusCode(), [200, 404]);
     }
+
+    public function test_can_update_club_profile(): void
+    {
+        $response = $this->post('/club/update', [
+            'club_name' => 'نادي تضامن حضرموت الرياضي المعتمد',
+            'season' => '2026/2027',
+            'primary_color_hex' => '#0F48A2',
+            'admin_name' => 'أحمد عمر',
+            'manager_name' => 'الكابتن علي',
+        ]);
+
+        $response->assertRedirect('/');
+        $this->assertDatabaseHas('club_profiles', [
+            'club_name' => 'نادي تضامن حضرموت الرياضي المعتمد',
+            'season' => '2026/2027',
+        ]);
+    }
+
+    public function test_can_delete_registered_device(): void
+    {
+        // First generate
+        $this->post('/generate', [
+            'mode' => 'single',
+            'single_device_id' => 'TD-DELT-9999',
+            'role' => 'MASTER_ADMIN',
+            'validity_days' => 30,
+        ]);
+
+        $this->assertDatabaseHas('club_devices', [
+            'device_id' => 'TD-DELT-9999',
+        ]);
+
+        $response = $this->delete('/devices/TD-DELT-9999');
+        $response->assertRedirect('/');
+
+        $this->assertDatabaseMissing('club_devices', [
+            'device_id' => 'TD-DELT-9999',
+        ]);
+    }
 }
