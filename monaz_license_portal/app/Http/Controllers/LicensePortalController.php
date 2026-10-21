@@ -17,17 +17,30 @@ class LicensePortalController extends Controller
 {
     public function __construct(private readonly Ed25519SignerService $signer) {}
 
-    public function index(): View
+    public function index(): \Symfony\Component\HttpFoundation\Response
     {
-        $club = $this->getOrCreateClub();
-        $devices = ClubDevice::where('club_id', $club->id)
-            ->orderBy('created_at', 'desc')
-            ->get();
+        try {
+            $club = $this->getOrCreateClub();
+            $devices = ClubDevice::where('club_id', $club->id)
+                ->orderBy('created_at', 'desc')
+                ->get();
 
-        return view('license_portal', [
-            'club' => $club,
-            'devices' => $devices,
-        ]);
+            return response(view('license_portal', [
+                'club' => $club,
+                'devices' => $devices,
+            ]));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('License portal index error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return response(
+                '<div style="direction:rtl;font-family:sans-serif;padding:30px;background:#0d1a30;color:#f1f5f9;border-radius:12px;margin:20px;">' .
+                '<h2 style="color:#f87171;">تنبيه تشخيصي للبوابة</h2>' .
+                '<p><strong>رسالة الخطأ:</strong> ' . htmlspecialchars($e->getMessage()) . '</p>' .
+                '<p><strong>الملف:</strong> ' . htmlspecialchars($e->getFile()) . ':' . $e->getLine() . '</p>' .
+                '<pre style="direction:ltr;background:#060c18;padding:15px;border-radius:8px;overflow:auto;font-size:12px;color:#cbd5e1;">' . htmlspecialchars($e->getTraceAsString()) . '</pre>' .
+                '</div>',
+                200
+            );
+        }
     }
 
     public function updateClub(Request $request): RedirectResponse

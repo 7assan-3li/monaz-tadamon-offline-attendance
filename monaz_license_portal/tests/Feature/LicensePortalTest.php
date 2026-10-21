@@ -10,17 +10,19 @@ class LicensePortalTest extends TestCase
 {
     public function test_license_portal_page_is_accessible(): void
     {
-        \App\Models\ClubDevice::create([
-            'id' => (string) \Illuminate\Support\Str::uuid(),
-            'club_id' => 'tadamon_hadhramaut',
-            'device_id' => 'TD-TEST-9999',
-            'device_name' => 'جهاز اختبار',
-            'role' => 'master_admin',
-            'team_name' => 'الفريق الأول',
-            'license_code' => 'TEST_CODE',
-            'expires_at' => now()->addDays(365),
-            'is_active' => true,
-        ]);
+        \App\Models\ClubDevice::updateOrCreate(
+            ['device_id' => 'TD-TEST-9999'],
+            [
+                'id' => (string) \Illuminate\Support\Str::uuid(),
+                'club_id' => 'tadamon_hadhramaut',
+                'device_name' => 'جهاز اختبار',
+                'role' => 'master_admin',
+                'team_name' => 'الفريق الأول',
+                'license_code' => 'TEST_CODE',
+                'expires_at' => now()->addDays(365),
+                'is_active' => true,
+            ]
+        );
 
         $response = $this->get('/');
         $response->assertStatus(200);
