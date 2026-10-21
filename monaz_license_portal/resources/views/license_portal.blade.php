@@ -32,8 +32,16 @@
                     <p class="text-xs text-slate-400">نظام إدارة التحضير الرياضي الميداني غير المتصل (MONAZ)</p>
                 </div>
             </div>
-            <div class="text-left hidden sm:block">
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <div class="text-left flex items-center gap-2 sm:gap-3">
+                <a href="{{ route('download.apk') }}"
+                   title="تحميل تطبيق الأندرويد الميداني المعتمد (APK)"
+                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white transition shadow-md shadow-blue-600/20 border border-blue-400/30">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    <span>تحميل التطبيق (APK)</span>
+                </a>
+                <span class="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                     تشفير Ed25519 نشط
                 </span>
@@ -273,6 +281,17 @@
                 <li>انسخ الكود الناتج والصقه في مربع كود التفعيل في التطبيق واضغط على زر «تفعيل الجهاز».</li>
                 <li>يتم التحقق فورياً ومحلياً 100% دون الحاجة لأي إنترنت على الهاتف عبر المفتاح العام المدمج.</li>
             </ol>
+            <div class="mt-4 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                <span class="text-slate-400">الملفات والموارد الرسمية للنادي:</span>
+                <div class="flex items-center gap-2">
+                    <a href="{{ route('download.apk') }}" class="px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 font-semibold text-xs flex items-center gap-1.5 transition">
+                        <span>📱 تحميل تطبيق الأندرويد الميداني (.apk)</span>
+                    </a>
+                    <a href="{{ route('download.offline_tool') }}" class="px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 font-semibold text-xs flex items-center gap-1.5 transition">
+                        <span>⚡ تحميل أداة التفعيل دون إنترنت (.html)</span>
+                    </a>
+                </div>
+            </div>
         </div>
     </main>
 

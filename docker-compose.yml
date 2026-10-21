@@ -1,0 +1,32 @@
+services:
+  portal:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: tadamon_portal_app
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8004:80"   # المنفذ الشاغر المخصص على سيرفر Contabo
+    environment:
+      - APP_NAME=بوابة تضامن حضرموت
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_URL=https://attendance.yourdomain.com
+      - LARAVEL_ED25519_PRIVATE_KEY=S2uCyfUYmJSLOHfMEyA6fl1YoD/ybvC32RjF11zTnDbH2h79kpqDnqFfhPXP3+Bd49ipL8Lyw+CO1eUlp/E4VQ==
+      - DB_CONNECTION=sqlite
+      - SESSION_DRIVER=file
+      - CACHE_STORE=file
+      - QUEUE_CONNECTION=sync
+    volumes:
+      - tadamon_db_data:/var/www/html/database
+      - tadamon_storage_data:/var/www/html/storage
+    networks:
+      - tadamon_network
+
+networks:
+  tadamon_network:
+    driver: bridge
+
+volumes:
+  tadamon_db_data:
+  tadamon_storage_data:

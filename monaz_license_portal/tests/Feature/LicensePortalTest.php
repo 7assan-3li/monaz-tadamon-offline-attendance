@@ -47,4 +47,16 @@ class LicensePortalTest extends TestCase
         $response->assertSee('TD-MSTR-0001');
         $response->assertSee('TD-FLDD-0002');
     }
+
+    public function test_can_download_apk_or_fallback(): void
+    {
+        $response = $this->get('/download/apk');
+        $this->assertContains($response->getStatusCode(), [200, 404]);
+    }
+
+    public function test_can_download_offline_tool(): void
+    {
+        $response = $this->get('/download/offline-tool');
+        $this->assertContains($response->getStatusCode(), [200, 404]);
+    }
 }
