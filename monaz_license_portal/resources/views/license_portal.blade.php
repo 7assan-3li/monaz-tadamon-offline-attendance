@@ -548,7 +548,7 @@
                                         {{ $dev->team_name ?? 'الفريق الأول' }}
                                     </td>
                                     <td class="py-3.5 px-4 font-mono text-slate-400">
-                                        {{ $dev->expires_at ? substr($dev->expires_at, 0, 10) : 'دائم' }}
+                                        {{ $dev->expires_at ? (is_string($dev->expires_at) ? substr($dev->expires_at, 0, 10) : $dev->expires_at->format('Y-m-d')) : 'دائم' }}
                                     </td>
                                     <td class="py-3.5 px-4 text-center">
                                         @if($dev->license_code)
