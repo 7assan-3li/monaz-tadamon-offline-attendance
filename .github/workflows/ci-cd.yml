@@ -1,0 +1,124 @@
+name: CI/CD Pipeline - Test & Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+jobs:
+  # -------------------------------------------------------------
+  # 1. اختبارات منصة التراخيص والمزامنة (Laravel 12)
+  # -------------------------------------------------------------
+  test-laravel:
+    name: Backend Tests (Laravel)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo, pdo_sqlite, pdo_mysql, bcmath, sodium, opcache
+          tools: composer:v2
+
+      - name: Copy .env
+        working-directory: monaz_license_portal
+        run: cp .env.example .env
+
+      - name: Install Composer Dependencies
+        working-directory: monaz_license_portal
+        run: composer install --prefer-dist --no-interaction --optimize-autoloader --ignore-platform-req=php+
+
+      - name: Generate App Key
+        working-directory: monaz_license_portal
+        run: php artisan key:generate
+
+      - name: Run Laravel Test Suite
+        working-directory: monaz_license_portal
+        run: php artisan test
+
+  # -------------------------------------------------------------
+  # 2. اختبارات وتحليل تطبيق الميدان (Flutter)
+  # -------------------------------------------------------------
+  test-flutter:
+    name: Mobile App Tests (Flutter)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        working-directory: tadamon_attendance_app
+        run: flutter pub get
+
+      - name: Static Code Analysis
+        working-directory: tadamon_attendance_app
+        run: flutter analyze
+
+      - name: Run Flutter Tests
+        working-directory: tadamon_attendance_app
+        run: flutter test
+
+  # -------------------------------------------------------------
+  # 3. النشر التلقائي على خادم الإنتاج (Contabo VPS)
+  # -------------------------------------------------------------
+  deploy:
+    name: Deploy to Production VPS
+    needs: [test-laravel, test-flutter]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Execute Remote SSH Deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script_stop: true
+          script: |
+            echo "🚀 Starting Automated Deployment for MONAZ Tadamon Attendance..."
+            cd /home/hasan/apps/attendance
+
+            # سحب آخر التحديثات المعتمدة
+            git pull origin main
+
+            # إعادة بناء وتشغيل الحاوية
+            docker compose up -d --build
+
+            # انتظار بدء التشغيل والفحص
+            sleep 5
+            docker ps --filter "name=attendance_app" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+            # فحص صحة الاستجابة الداخلية
+            curl -fsS http://127.0.0.1:8004 > /dev/null && echo "✅ Application is HEALTHY on port 8004!"
+
+            # تنظيف صور الدوكر المؤقتة لتحرير المساحة
+            docker image prune -f
+
+            echo "🎉 Deployment successfully completed!"
