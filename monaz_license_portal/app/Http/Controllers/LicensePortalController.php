@@ -235,6 +235,10 @@ class LicensePortalController extends Controller
 
     private function getOrCreateClub(): ClubProfile
     {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('club_profiles') || !\Illuminate\Support\Facades\Schema::hasTable('club_devices')) {
+            \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        }
+
         return ClubProfile::firstOrCreate(
             ['id' => 'tadamon_hadhramaut'],
             [

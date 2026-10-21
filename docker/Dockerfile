@@ -29,6 +29,7 @@ COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
 
 # Copy application source code
 COPY monaz_license_portal /var/www/html
+COPY monaz_license_portal/database/migrations /var/www/migrations_backup
 
 # Copy downloadable releases and offline tool into container build context
 COPY releases /var/www/releases

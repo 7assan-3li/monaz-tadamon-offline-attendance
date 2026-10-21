@@ -30,6 +30,12 @@ if [ -f /var/www/بوابة_توليد_كود_التفعيل.html ] && [ ! -f /v
     cp /var/www/بوابة_توليد_كود_التفعيل.html /var/www/html/public/downloads/بوابة_توليد_كود_التفعيل.html
 fi
 
+# Synchronize latest migration files into database volume
+mkdir -p /var/www/html/database/migrations
+if [ -d /var/www/migrations_backup ]; then
+    cp -f /var/www/migrations_backup/* /var/www/html/database/migrations/ 2>/dev/null || true
+fi
+
 # Set proper ownership and permissions
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database /var/www/html/public/downloads
 chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
