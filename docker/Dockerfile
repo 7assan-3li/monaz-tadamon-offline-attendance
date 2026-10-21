@@ -1,4 +1,4 @@
-FROM php:8.2-fpm-alpine
+FROM php:8.4-fpm-alpine
 
 # Set working directory
 WORKDIR /var/www/html
@@ -44,7 +44,7 @@ RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh \
     && chmod +x /usr/local/bin/entrypoint.sh
 
 # Install production PHP dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+RUN composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-req=php+
 
 # Create download directory and pre-seed APK and offline HTML tool
 RUN mkdir -p /var/www/html/public/downloads \
