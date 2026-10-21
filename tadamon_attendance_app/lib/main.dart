@@ -5,6 +5,7 @@ import 'package:tadamon_attendance_app/core/presentation/app_role_scope.dart';
 import 'package:tadamon_attendance_app/core/presentation/design_system_gallery_screen.dart';
 import 'package:tadamon_attendance_app/core/presentation/splash_screen.dart';
 import 'package:tadamon_attendance_app/core/routing/master_admin_app_shell.dart';
+import 'package:tadamon_attendance_app/core/routing/field_attendance_app_shell.dart';
 import 'package:tadamon_attendance_app/core/security/android_hardware_components_source.dart';
 import 'package:tadamon_attendance_app/core/security/hardware_fingerprint.dart';
 import 'package:tadamon_attendance_app/core/security/high_watermark_guard.dart';
@@ -136,6 +137,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
   var _isUnlocked = false;
   var _pinLockActive = false;
   var _isTemporaryFieldMode = false;
+  var _isFieldUnlockedToMaster = false;
 
   @override
   void initState() {
@@ -175,7 +177,9 @@ class _AppBootstrapState extends State<AppBootstrap> {
 
     final activeTeam = context.watch<ActiveTeamCubit>().state;
     final isFieldAccount = license.role == ActivatedDeviceRole.fieldAttendance;
-    final isEffectiveMaster = !isFieldAccount && !_isTemporaryFieldMode;
+    final isEffectiveMaster = isFieldAccount
+        ? _isFieldUnlockedToMaster
+        : !_isTemporaryFieldMode;
 
     if (!_masterReady) {
       return const Center(child: CircularProgressIndicator());
@@ -185,6 +189,38 @@ class _AppBootstrapState extends State<AppBootstrap> {
       return AppPinLockScreen(
         settingsRepository: serviceLocator<SettingsRepository>(),
         onUnlocked: () => setState(() => _isUnlocked = true),
+      );
+    }
+
+    if (!isEffectiveMaster) {
+      return AppRoleScope(
+        isMasterAdmin: false,
+        child: FieldAttendanceAppShell(
+          onExitFieldMode: () {
+            setState(() {
+              if (isFieldAccount) {
+                _isFieldUnlockedToMaster = true;
+              } else {
+                _isTemporaryFieldMode = false;
+              }
+            });
+          },
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider<TeamsBloc>.value(
+                value: serviceLocator<TeamsBloc>()..add(const TeamsRequested()),
+              ),
+              BlocProvider(
+                create: (_) => serviceLocator<AttendanceBloc>()
+                  ..add(StartTodaySessionEvent(activeTeam.teamId)),
+              ),
+            ],
+            child: const FieldAttendanceFlow(
+              initialPage: 0,
+              showBottomNav: false,
+            ),
+          ),
+        ),
       );
     }
 
@@ -228,10 +264,15 @@ class _AppBootstrapState extends State<AppBootstrap> {
               create: (_) =>
                   serviceLocator<SettingsBloc>()..add(const SettingsRequested()),
               child: ClubSettingsScreen(
-                onSwitchToFieldMode: !isFieldAccount
-                    ? () => setState(
-                        () => _isTemporaryFieldMode = !_isTemporaryFieldMode)
-                    : null,
+                onSwitchToFieldMode: () {
+                  setState(() {
+                    if (isFieldAccount) {
+                      _isFieldUnlockedToMaster = false;
+                    } else {
+                      _isTemporaryFieldMode = true;
+                    }
+                  });
+                },
               ),
             ),
             _ => DesignSystemGalleryScreen(

@@ -9,6 +9,7 @@ import 'package:tadamon_attendance_app/features/teams/presentation/bloc/active_t
 import 'package:tadamon_attendance_app/features/attendance/domain/entities/attendance_session.dart';
 import 'package:tadamon_attendance_app/features/attendance/data/datasources/attendance_dao.dart';
 import 'package:tadamon_attendance_app/features/attendance/presentation/bloc/attendance_bloc.dart';
+import 'package:tadamon_attendance_app/features/sync/domain/repositories/cloud_sync_repository.dart';
 
 class FieldDashboardScreen extends StatefulWidget {
   const FieldDashboardScreen({required this.onSessionStarted, super.key});
@@ -54,6 +55,8 @@ class _FieldDashboardScreenState extends State<FieldDashboardScreen> {
               children: [
                 // Club Header Card
                 _buildHeaderCard(context),
+                const SizedBox(height: 12),
+                _buildFieldSyncBar(context),
                 const SizedBox(height: 16),
 
                 // Active Drafts Section
@@ -169,6 +172,103 @@ class _FieldDashboardScreenState extends State<FieldDashboardScreen> {
           ),
         ),
       );
+
+  Widget _buildFieldSyncBar(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFDBEAFE),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(LucideIcons.cloudDownload, size: 16, color: Color(0xFF1D4ED8)),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'تحديث بيانات النادي السحابية',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E40AF),
+                  ),
+                ),
+                Text(
+                  'اسحب أحدث كشوفات وهوية النادي قبل بدء الحصة',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 10,
+                    color: Color(0xFF3B82F6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1D4ED8),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              minimumSize: Size.zero,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () async {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('جاري جلب وتحديث بيانات النادي من السحابة...', style: TextStyle(fontFamily: 'Cairo')),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+              try {
+                final repo = serviceLocator<CloudSyncRepository>();
+                final result = await repo.pullMasterData();
+                if (!context.mounted) return;
+                if (result != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'تم تحديث البيانات بنجاح (${result.players.length} لاعب • ${result.teams.length} فرق) ✅',
+                        style: const TextStyle(fontFamily: 'Cairo'),
+                      ),
+                      backgroundColor: AppColors.present,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('تعذر الاتصال بالسحابة؛ تأكد من اتصال الإنترنت.', style: TextStyle(fontFamily: 'Cairo')),
+                      backgroundColor: Color(0xFFD97706),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('حدث خطأ: $e', style: const TextStyle(fontFamily: 'Cairo')),
+                    backgroundColor: AppColors.unexcused,
+                  ),
+                );
+              }
+            },
+            child: const Text('سحب ⬇️', style: TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildHeaderCard(BuildContext context) {
     final now = DateTime.now();

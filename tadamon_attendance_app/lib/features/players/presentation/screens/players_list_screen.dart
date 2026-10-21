@@ -57,24 +57,27 @@ class _PlayersListScreenState extends State<PlayersListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isMaster = AppRoleScope.isMaster(context);
     Widget content = Scaffold(
       backgroundColor: AppColors.canvas,
       appBar: _buildAppBar(context),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _edit(context),
-        backgroundColor: AppColors.royalBlue,
-        foregroundColor: Colors.white,
-        elevation: 3,
-        icon: const Icon(LucideIcons.userPlus, size: 18),
-        label: const Text(
-          'إضافة لاعب',
-          style: TextStyle(
-            fontFamily: 'Cairo',
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+      floatingActionButton: isMaster
+          ? FloatingActionButton.extended(
+              onPressed: () => _edit(context),
+              backgroundColor: AppColors.royalBlue,
+              foregroundColor: Colors.white,
+              elevation: 3,
+              icon: const Icon(LucideIcons.userPlus, size: 18),
+              label: const Text(
+                'إضافة لاعب',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            )
+          : null,
       body: BlocBuilder<PlayersBloc, PlayersState>(
         builder: (context, state) => switch (state) {
           PlayersInitial() || PlayersLoading() => const Center(
@@ -528,30 +531,32 @@ class _PlayersListScreenState extends State<PlayersListScreen> {
                             height: 1.5,
                           ),
                         ),
-                        const SizedBox(height: 18),
-                        FilledButton.icon(
-                          onPressed: () => _edit(context),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.royalBlue,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 12,
+                        if (AppRoleScope.isMaster(context)) ...[
+                          const SizedBox(height: 18),
+                          FilledButton.icon(
+                            onPressed: () => _edit(context),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.royalBlue,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                            icon: const Icon(LucideIcons.userPlus, size: 18),
+                            label: const Text(
+                              'إضافة أول لاعب إلى الكشف',
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                          icon: const Icon(LucideIcons.userPlus, size: 18),
-                          label: const Text(
-                            'إضافة أول لاعب إلى الكشف',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
