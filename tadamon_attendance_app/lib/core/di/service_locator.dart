@@ -36,6 +36,10 @@ import 'package:tadamon_attendance_app/features/sync/domain/usecases/generate_qr
 import 'package:tadamon_attendance_app/features/sync/domain/usecases/import_qr_payload_usecase.dart';
 import 'package:tadamon_attendance_app/features/sync/domain/usecases/start_local_sync_server_usecase.dart';
 import 'package:tadamon_attendance_app/features/sync/presentation/bloc/sync_bloc.dart';
+import 'package:tadamon_attendance_app/features/sync/data/datasources/cloud_sync_api_client.dart';
+import 'package:tadamon_attendance_app/features/sync/data/repositories/cloud_sync_repository_impl.dart';
+import 'package:tadamon_attendance_app/features/sync/domain/repositories/cloud_sync_repository.dart';
+import 'package:tadamon_attendance_app/features/sync/presentation/bloc/cloud_sync_bloc.dart';
 import 'package:tadamon_attendance_app/features/reports/data/datasources/audit_log_dao.dart';
 import 'package:tadamon_attendance_app/features/reports/data/datasources/excel_report_engine.dart';
 import 'package:tadamon_attendance_app/features/reports/data/datasources/pdf_report_engine.dart';
@@ -249,6 +253,16 @@ void configureSyncDependencies({String? explicitPairingSecret}) {
         importQrPayload: serviceLocator<ImportQrPayloadUseCase>(),
         startLocalSyncServer: serviceLocator<StartLocalSyncServerUseCase>(),
       ),
+    )
+    ..registerLazySingleton<CloudSyncApiClient>(CloudSyncApiClient.new)
+    ..registerLazySingleton<CloudSyncRepository>(
+      () => CloudSyncRepositoryImpl(
+        apiClient: serviceLocator<CloudSyncApiClient>(),
+        settingsRepository: serviceLocator<SettingsRepository>(),
+      ),
+    )
+    ..registerFactory<CloudSyncBloc>(
+      () => CloudSyncBloc(repository: serviceLocator<CloudSyncRepository>()),
     );
 }
 

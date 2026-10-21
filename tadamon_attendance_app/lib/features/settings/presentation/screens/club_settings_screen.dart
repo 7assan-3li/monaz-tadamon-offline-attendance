@@ -25,6 +25,11 @@ import 'package:tadamon_attendance_app/features/backup/domain/usecases/restore_b
 import 'package:tadamon_attendance_app/features/settings/presentation/screens/club_themes_screen.dart';
 import 'package:tadamon_attendance_app/features/teams/presentation/bloc/teams_bloc.dart';
 import 'package:tadamon_attendance_app/features/teams/presentation/screens/teams_screen.dart';
+import 'package:tadamon_attendance_app/core/database/app_database.dart';
+import 'package:tadamon_attendance_app/features/sync/presentation/bloc/cloud_sync_bloc.dart';
+import 'package:tadamon_attendance_app/features/sync/presentation/bloc/cloud_sync_event.dart';
+import 'package:tadamon_attendance_app/features/sync/presentation/bloc/cloud_sync_state.dart';
+import 'package:tadamon_attendance_app/features/teams/domain/repositories/teams_repository.dart';
 
 class ClubSettingsScreen extends StatelessWidget {
   const ClubSettingsScreen({this.onSwitchToFieldMode, super.key});
@@ -249,6 +254,14 @@ class _SettingsContent extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         _buildFieldModeSwitchCard(context),
+        const SizedBox(height: 16),
+        _buildSectionHeader(
+          icon: LucideIcons.cloud,
+          title: 'المزامنة السحابية للنادي (Cloud Sync)',
+          iconColor: const Color(0xFF0284C7),
+        ),
+        const SizedBox(height: 8),
+        _buildCloudSyncCard(context),
         const SizedBox(height: 16),
         _buildSectionHeader(
           icon: LucideIcons.building2,
@@ -572,6 +585,406 @@ class _SettingsContent extends StatelessWidget {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCloudSyncCard(BuildContext context) {
+    final isMaster = AppRoleScope.isMaster(context);
+
+    return BlocProvider<CloudSyncBloc>(
+      create: (_) => serviceLocator<CloudSyncBloc>(),
+      child: BlocConsumer<CloudSyncBloc, CloudSyncState>(
+        listener: (context, state) {
+          if (state is MasterDataPushedState) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message, style: const TextStyle(fontFamily: 'Cairo')),
+                backgroundColor: AppColors.present,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          } else if (state is MasterDataPulledState) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  '${state.message} (${state.masterData.players.length} لاعب • ${state.masterData.teams.length} فرق)',
+                  style: const TextStyle(fontFamily: 'Cairo'),
+                ),
+                backgroundColor: AppColors.present,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          } else if (state is CloudHealthState) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  state.isOnline
+                      ? 'الخادم السحابي (attendance.monaz.dev) متصل ويعمل بكفاءة عالية 🟢'
+                      : 'تعذر الوصول للخادم السحابي حالياً (تحقق من اتصال الإنترنت) 🔴',
+                  style: const TextStyle(fontFamily: 'Cairo'),
+                ),
+                backgroundColor: state.isOnline ? AppColors.royalBlue : AppColors.unexcused,
+              ),
+            );
+          } else if (state is CloudSessionsFetchedState) {
+            _showCloudSessionsDialog(context, state.sessions);
+          } else if (state is SessionApprovedCloudState) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message, style: const TextStyle(fontFamily: 'Cairo')),
+                backgroundColor: AppColors.present,
+              ),
+            );
+          } else if (state is CloudSyncFailure) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.error, style: const TextStyle(fontFamily: 'Cairo')),
+                backgroundColor: AppColors.unexcused,
+              ),
+            );
+          }
+        },
+        builder: (context, state) {
+          final isLoading = state is CloudSyncLoading;
+          final loadingText = isLoading ? state.operation : null;
+
+          return Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFBAE6FD)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x06000000),
+                  blurRadius: 10,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE0F2FE),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            LucideIcons.cloud,
+                            size: 18,
+                            color: Color(0xFF0284C7),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'منظومة المزامنة السحابية',
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            Text(
+                              'https://attendance.monaz.dev',
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 10,
+                                color: Color(0xFF0284C7),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    InkWell(
+                      onTap: isLoading
+                          ? null
+                          : () {
+                              context.read<CloudSyncBloc>().add(const CheckCloudHealthEvent());
+                            },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFBBF7D0)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(LucideIcons.activity, size: 12, color: Color(0xFF16A34A)),
+                            SizedBox(width: 4),
+                            Text(
+                              'فحص الاتصال',
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF16A34A),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  isMaster
+                      ? 'بصفتك «جهاز الإدارة العامة»، يمكنك رفع قوائم الفرق واللاعبين وهوية النادي للسحابة، لتتمكن أجهزة الميدان من استلامها في ثوانٍ، أو استعراض واعتماد الحصص التدريبية المرحّلة.'
+                      : 'بصفتك «جهاز المحضر الميداني»، اسحب بيانات وهوية النادي وقوائم اللاعبين من السحابة قبل بدء التمرين للعمل بدون إنترنت 100% طوال الحصة.',
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 11,
+                    height: 1.45,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                if (isLoading) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0284C7)),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        loadingText ?? 'جاري تنفيذ العملية...',
+                        style: const TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 11,
+                          color: Color(0xFF0284C7),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 12),
+                if (isMaster) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: isLoading ? null : () => _handlePushMasterData(context),
+                          icon: const Icon(LucideIcons.cloudUpload, size: 15),
+                          label: const Text(
+                            'رفع بيانات النادي واللاعبين ⬆️',
+                            style: TextStyle(fontFamily: 'Cairo', fontSize: 11.5, fontWeight: FontWeight.bold),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0284C7),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 9),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: isLoading
+                              ? null
+                              : () {
+                                  context.read<CloudSyncBloc>().add(const FetchCloudSessionsEvent());
+                                },
+                          icon: const Icon(LucideIcons.inbox, size: 15),
+                          label: const Text(
+                            'حصص الميدان 📥',
+                            style: TextStyle(fontFamily: 'Cairo', fontSize: 11.5, fontWeight: FontWeight.bold),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF0284C7),
+                            side: const BorderSide(color: Color(0xFF0284C7)),
+                            padding: const EdgeInsets.symmetric(vertical: 9),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ] else ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: isLoading
+                          ? null
+                          : () {
+                              context.read<CloudSyncBloc>().add(const PullMasterDataCloudEvent());
+                            },
+                      icon: const Icon(LucideIcons.cloudDownload, size: 16),
+                      label: const Text(
+                        'سحب وتحديث بيانات النادي واللاعبين ⬇️',
+                        style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF059669),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _handlePushMasterData(BuildContext context) async {
+    final bloc = context.read<CloudSyncBloc>();
+
+    final clubProfile = {
+      'club_name': settings.clubName.isNotEmpty ? settings.clubName : 'نادي تضامن حضرموت الرياضي',
+      'season': settings.season.isNotEmpty ? settings.season : '2026/2027',
+      'primary_color_hex': settings.primaryColorHex ?? '#0F48A2',
+      'admin_name': settings.adminName,
+      'manager_name': settings.managerName,
+    };
+
+    final List<Map<String, dynamic>> teamsData = [];
+    if (serviceLocator.isRegistered<TeamsRepository>()) {
+      final teams = await serviceLocator<TeamsRepository>().getTeams();
+      for (final t in teams) {
+        teamsData.add({
+          'id': t.id,
+          'name': t.name,
+          'age_category': t.category,
+        });
+      }
+    }
+
+    final List<Map<String, dynamic>> playersData = [];
+    if (serviceLocator.isRegistered<AppDatabase>()) {
+      final db = serviceLocator<AppDatabase>();
+      final players = await db.select(db.players).get();
+      for (final p in players) {
+        playersData.add({
+          'id': p.id,
+          'name': p.name,
+          'jersey_number': p.jerseyNumber,
+          'position': p.position,
+          'team_id': p.teamId,
+          'is_archived': p.isArchived,
+        });
+      }
+    }
+
+    bloc.add(PushMasterDataCloudEvent(
+      sourceDeviceId: 'TD-MSTR-01',
+      clubProfile: clubProfile,
+      teams: teamsData,
+      players: playersData,
+    ));
+  }
+
+  void _showCloudSessionsDialog(BuildContext context, List<Map<String, dynamic>> sessions) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(LucideIcons.cloud, color: Color(0xFF0284C7)),
+            const SizedBox(width: 8),
+            Text(
+              'الحصص المرحّلة بالسحابة (${sessions.length})',
+              style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: sessions.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(LucideIcons.inbox, size: 40, color: AppColors.textSecondary),
+                      SizedBox(height: 8),
+                      Text(
+                        'لا توجد حصص جديدة مرحّلة من الميدان حالياً.',
+                        style: TextStyle(fontFamily: 'Cairo', color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: sessions.length,
+                  separatorBuilder: (_, _) => const Divider(height: 12),
+                  itemBuilder: (_, index) {
+                    final s = sessions[index];
+                    final isApproved = s['status'] == 'approved';
+                    final sessionUuid = s['session_uuid'] as String? ?? '';
+                    final shortUuid = sessionUuid.length > 8 ? sessionUuid.substring(0, 8) : sessionUuid;
+                    return ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        isApproved ? LucideIcons.badgeCheck : LucideIcons.clock,
+                        color: isApproved ? AppColors.present : const Color(0xFFD97706),
+                      ),
+                      title: Text(
+                        'حصة: ${s['session_date'] ?? 'تمرين'}',
+                        style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        'الفريق: ${s['team_id'] ?? 'العام'} • المعرف: $shortUuid...',
+                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 11),
+                      ),
+                      trailing: isApproved
+                          ? const Text(
+                              'معتمد ✅',
+                              style: TextStyle(fontFamily: 'Cairo', color: AppColors.present, fontWeight: FontWeight.bold, fontSize: 11),
+                            )
+                          : ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.royalBlue,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                minimumSize: Size.zero,
+                              ),
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                context.read<CloudSyncBloc>().add(
+                                  ApproveCloudSessionEvent(sessionUuid),
+                                );
+                              },
+                              child: const Text('اعتماد ✍️', style: TextStyle(fontFamily: 'Cairo', fontSize: 11)),
+                            ),
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('إغلاق', style: TextStyle(fontFamily: 'Cairo')),
+          ),
         ],
       ),
     );

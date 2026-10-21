@@ -11,6 +11,8 @@ import 'package:tadamon_attendance_app/features/attendance/presentation/bloc/att
 import 'package:tadamon_attendance_app/features/attendance/presentation/widgets/locked_session_banner.dart';
 import 'package:tadamon_attendance_app/features/sync/presentation/bloc/sync_bloc.dart';
 import 'package:tadamon_attendance_app/features/sync/presentation/screens/field_qr_display_screen.dart';
+import 'package:tadamon_attendance_app/features/attendance/domain/entities/attendance_session.dart';
+import 'package:tadamon_attendance_app/features/sync/domain/repositories/cloud_sync_repository.dart';
 
 class DispatchReviewScreen extends StatelessWidget {
   const DispatchReviewScreen({
@@ -272,6 +274,28 @@ class DispatchReviewScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                     ],
+                    // Cloud Sync Direct Dispatch
+                    ElevatedButton.icon(
+                      onPressed: () => _syncSessionToCloud(context, session),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0284C7),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(44),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      icon: const Icon(LucideIcons.cloudUpload, size: 16),
+                      label: const Text(
+                        '☁️ مزامنة الحصة سحابياً (Cloud Sync)',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     // Optional QR Export for air-gap sync
                     OutlinedButton.icon(
                       onPressed: () {
@@ -451,6 +475,62 @@ class DispatchReviewScreen extends StatelessWidget {
     );
     if (confirmed && context.mounted) {
       context.read<AttendanceBloc>().add(const DispatchSessionEvent());
+    }
+  }
+
+  Future<void> _syncSessionToCloud(
+    BuildContext context,
+    AttendanceSession session,
+  ) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'جاري رفع ومزامنة الحصة التدريبية مع السحابة (attendance.monaz.dev)...',
+          style: TextStyle(fontFamily: 'Cairo'),
+        ),
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    try {
+      final repo = serviceLocator<CloudSyncRepository>();
+      final success = await repo.dispatchSessionToCloud(session);
+      if (!context.mounted) return;
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'تم توثيق الحصة التدريبية في السحابة بنجاح! ☁️✅',
+              style: TextStyle(fontFamily: 'Cairo'),
+            ),
+            backgroundColor: AppColors.present,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'تعذر الاتصال بالسحابة حالياً (وضع أوفلاين). تم حفظ الحصة محلياً بأمان، ويمكنك الترحيل عبر الـ QR.',
+              style: TextStyle(fontFamily: 'Cairo'),
+            ),
+            backgroundColor: Color(0xFFD97706),
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'حدث خطأ أثناء المزامنة السحابية: $e',
+            style: const TextStyle(fontFamily: 'Cairo'),
+          ),
+          backgroundColor: AppColors.unexcused,
+        ),
+      );
     }
   }
 }
