@@ -21,13 +21,13 @@ if [ ! -f /var/www/html/.env ]; then
     cp /var/www/html/.env.example /var/www/html/.env
 fi
 
-# Link or copy bundled releases if not yet present in downloads
-if [ -f /var/www/releases/MONAZ-Tadamon-Attendance-1.0.0+1.apk ] && [ ! -f /var/www/html/public/downloads/MONAZ-Tadamon-Attendance.apk ]; then
-    cp /var/www/releases/MONAZ-Tadamon-Attendance-1.0.0+1.apk /var/www/html/public/downloads/MONAZ-Tadamon-Attendance.apk
+# Link or copy bundled releases into downloads (always update to latest release)
+if [ -f /var/www/releases/MONAZ-Tadamon-Attendance-1.0.0+1.apk ]; then
+    cp -f /var/www/releases/MONAZ-Tadamon-Attendance-1.0.0+1.apk /var/www/html/public/downloads/MONAZ-Tadamon-Attendance.apk
 fi
 
-if [ -f /var/www/بوابة_توليد_كود_التفعيل.html ] && [ ! -f /var/www/html/public/downloads/بوابة_توليد_كود_التفعيل.html ]; then
-    cp /var/www/بوابة_توليد_كود_التفعيل.html /var/www/html/public/downloads/بوابة_توليد_كود_التفعيل.html
+if [ -f /var/www/بوابة_توليد_كود_التفعيل.html ]; then
+    cp -f /var/www/بوابة_توليد_كود_التفعيل.html /var/www/html/public/downloads/بوابة_توليد_كود_التفعيل.html
 fi
 
 # Synchronize latest migration files into database volume
