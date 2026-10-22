@@ -85,7 +85,7 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
 
         final scaffold = Scaffold(
           backgroundColor: AppColors.canvas,
-          appBar: _buildAppBar(context),
+          appBar: _buildAppBar(context, session),
           body: Column(
             children: [
               Expanded(
@@ -182,7 +182,7 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
+  PreferredSizeWidget _buildAppBar(BuildContext context, AttendanceSession session) {
     final isMaster = AppRoleScope.isMaster(context);
     return AppBar(
       elevation: 0,
@@ -277,6 +277,19 @@ class _QuickAttendanceScreenState extends State<QuickAttendanceScreen> {
               ),
             ],
           ),
+        ),
+        IconButton(
+          icon: const Icon(LucideIcons.refreshCw, color: Colors.white, size: 18),
+          tooltip: 'تحديث كشف الحضور',
+          onPressed: () {
+            context.read<AttendanceBloc>().add(StartTodaySessionEvent(session.teamId));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('تم تحديث كشف الحضور', style: TextStyle(fontFamily: 'Cairo')),
+                duration: Duration(seconds: 1),
+              ),
+            );
+          },
         ),
         IconButton(
           icon: const Icon(

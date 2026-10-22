@@ -1,8 +1,13 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:tadamon_attendance_app/core/constants/app_colors.dart';
 import 'package:tadamon_attendance_app/core/theme/club_theme_service.dart';
+import 'package:tadamon_attendance_app/core/widgets/club_logo_widget.dart';
 import 'package:tadamon_attendance_app/features/settings/domain/entities/club_profile_settings.dart';
 import 'package:tadamon_attendance_app/features/settings/presentation/bloc/settings_bloc.dart';
 
@@ -21,6 +26,7 @@ class ClubThemesScreen extends StatefulWidget {
 class _ClubThemesScreenState extends State<ClubThemesScreen> {
   late Color _selectedColor;
   late TextEditingController _hexController;
+  late String? _currentLogoPath;
 
   static const List<Color> _availableColors = [
     Color(0xFF0F48A2), // Royal Blue (الافتراضي)
@@ -48,6 +54,7 @@ class _ClubThemesScreenState extends State<ClubThemesScreen> {
   @override
   void initState() {
     super.initState();
+    _currentLogoPath = widget.currentSettings.logoPath;
     if (widget.currentSettings.primaryColorHex != null &&
         widget.currentSettings.primaryColorHex!.isNotEmpty) {
       _selectedColor = ClubThemeService.parseColorHex(
@@ -76,17 +83,112 @@ class _ClubThemesScreenState extends State<ClubThemesScreen> {
     });
   }
 
+  Future<void> _pickLogo() async {
+    try {
+      final file = await FilePicker.pickFile(type: FileType.image);
+      if (file == null) return;
+
+      final docsDir = await getApplicationDocumentsDirectory();
+      final logosDir = Directory(p.join(docsDir.path, 'club_branding'));
+      if (!await logosDir.exists()) {
+        await logosDir.create(recursive: true);
+      }
+
+      final ext = file.extension != null
+          ? '.${file.extension}'
+          : (file.path != null ? p.extension(file.path!) : '.png');
+      final destPath = p.join(
+        logosDir.path,
+        'club_logo_${DateTime.now().millisecondsSinceEpoch}$ext',
+      );
+
+      if (file.path != null && await File(file.path!).exists()) {
+        await File(file.path!).copy(destPath);
+      } else {
+        final bytes = await file.readAsBytes();
+        if (bytes.isNotEmpty) {
+          await File(destPath).writeAsBytes(bytes, flush: true);
+        } else {
+          throw Exception('تعذر قراءة بيانات صورة الشعار');
+        }
+      }
+
+      setState(() {
+        _currentLogoPath = destPath;
+      });
+
+      ClubThemeService.instance.updateLogoPath(destPath);
+      if (mounted) {
+        context.read<SettingsBloc>().add(
+              SettingsSaved(widget.currentSettings.copyWith(
+                primaryColorHex: _colorToHex(_selectedColor),
+                logoPath: destPath,
+              )),
+            );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'تم تحديث وتثبيت شعار النادي بنجاح',
+              style: TextStyle(fontFamily: 'Cairo'),
+            ),
+            backgroundColor: AppColors.present,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'تعذر اختيار الشعار: $e',
+              style: const TextStyle(fontFamily: 'Cairo'),
+            ),
+            backgroundColor: AppColors.unexcused,
+          ),
+        );
+      }
+    }
+  }
+
+  void _resetLogo() {
+    setState(() {
+      _currentLogoPath = null;
+    });
+    ClubThemeService.instance.updateLogoPath(null);
+    context.read<SettingsBloc>().add(
+          SettingsSaved(widget.currentSettings.copyWith(
+            primaryColorHex: _colorToHex(_selectedColor),
+            logoPath: '',
+          )),
+        );
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'تمت استعادة الشعار الافتراضي لنادي تضامن حضرموت',
+          style: TextStyle(fontFamily: 'Cairo'),
+        ),
+        backgroundColor: AppColors.royalBlue,
+      ),
+    );
+  }
+
   void _applyAndSave() {
     final hex = _colorToHex(_selectedColor);
     ClubThemeService.instance.updatePrimaryColor(_selectedColor);
+    if (_currentLogoPath != null) {
+      ClubThemeService.instance.updateLogoPath(_currentLogoPath);
+    }
     context.read<SettingsBloc>().add(
-          SettingsSaved(widget.currentSettings.copyWith(primaryColorHex: hex)),
+          SettingsSaved(widget.currentSettings.copyWith(
+            primaryColorHex: hex,
+            logoPath: _currentLogoPath,
+          )),
         );
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text(
-          'تم تطبيق واعتماد اللون بنجاح على كامل النظام',
+          'تم تطبيق واعتماد هوية النادي بنجاح على كامل النظام',
           style: TextStyle(fontFamily: 'Cairo'),
         ),
         backgroundColor: AppColors.present,
@@ -365,6 +467,115 @@ class _ClubThemesScreenState extends State<ClubThemesScreen> {
                             } catch (_) {}
                           },
                         ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Club Logo Identity Card
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.borderSubtle),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(LucideIcons.image, size: 18, color: _selectedColor),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'شعار النادي الرياضي المعتمد',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Container(
+                            width: 64,
+                            height: 64,
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppColors.borderSubtle, width: 1.5),
+                            ),
+                            child: _currentLogoPath != null &&
+                                    _currentLogoPath!.isNotEmpty &&
+                                    File(_currentLogoPath!).existsSync()
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Image.file(
+                                      File(_currentLogoPath!),
+                                      fit: BoxFit.contain,
+                                    ),
+                                  )
+                                : const ClubLogoWidget(
+                                    width: 56,
+                                    height: 56,
+                                    fit: BoxFit.contain,
+                                  ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ElevatedButton.icon(
+                                  onPressed: _pickLogo,
+                                  icon: const Icon(LucideIcons.uploadCloud, size: 16),
+                                  label: const Text(
+                                    'اختيار صورة شعار جديدة',
+                                    style: TextStyle(
+                                      fontFamily: 'Cairo',
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _selectedColor,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 10,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                ),
+                                if (_currentLogoPath != null && _currentLogoPath!.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  TextButton.icon(
+                                    onPressed: _resetLogo,
+                                    icon: const Icon(LucideIcons.rotateCcw, size: 13, color: AppColors.unexcused),
+                                    label: const Text(
+                                      'استعادة الشعار الافتراضي للنادي',
+                                      style: TextStyle(
+                                        fontFamily: 'Cairo',
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.unexcused,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

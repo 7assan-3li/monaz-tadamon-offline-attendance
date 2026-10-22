@@ -166,6 +166,25 @@ class LicensePortalTest extends TestCase
         ]);
     }
 
+    public function test_can_delete_device_via_club_scoped_route(): void
+    {
+        $this->post('/generate', [
+            'mode' => 'single',
+            'single_device_id' => 'TD-SCOP-8888',
+            'role' => 'MASTER_ADMIN',
+            'validity_days' => 30,
+        ]);
+
+        $device = \App\Models\ClubDevice::where('device_id', 'TD-SCOP-8888')->firstOrFail();
+
+        $response = $this->delete("/clubs/tadamon_hadhramaut/devices/{$device->id}");
+        $response->assertRedirect('/clubs/tadamon_hadhramaut');
+
+        $this->assertDatabaseMissing('club_devices', [
+            'id' => $device->id,
+        ]);
+    }
+
     public function test_can_export_club_backup(): void
     {
         $response = $this->get('/clubs/tadamon_hadhramaut/backup');

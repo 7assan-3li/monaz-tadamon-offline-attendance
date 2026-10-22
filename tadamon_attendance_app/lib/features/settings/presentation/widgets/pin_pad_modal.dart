@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
 
-Future<String?> showPinPadModal(BuildContext context) =>
+Future<String?> showPinPadModal(
+  BuildContext context, {
+  String? title,
+  String? subtitle,
+}) =>
     showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => const _PinPad(),
+      builder: (_) => _PinPad(
+        title: title ?? 'رمز الحماية (PIN)',
+        subtitle: subtitle ?? 'أدخل رمز PIN المكون من 4 أرقام للمتابعة.',
+      ),
     );
 
 class _PinPad extends StatefulWidget {
-  const _PinPad();
+  const _PinPad({required this.title, required this.subtitle});
+  final String title;
+  final String subtitle;
   @override
   State<_PinPad> createState() => _PinPadState();
 }
@@ -23,11 +32,15 @@ class _PinPadState extends State<_PinPad> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'رمز الحماية (PIN)',
-            style: Theme.of(context).textTheme.headlineSmall,
+            widget.title,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
-          const Text('اختر رمزاً من 4 أرقام لحماية إعدادات الإدارة.'),
+          Text(
+            widget.subtitle,
+            style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, color: Color(0xFF64748B)),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 18),
           Text(
             '●' * pin.length,

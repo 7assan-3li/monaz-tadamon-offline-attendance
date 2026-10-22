@@ -7,7 +7,8 @@ class CloudSyncApiClient {
     HttpClient? client,
   })  : baseUrl = baseUrl ?? 'https://attendance.monaz.dev',
         _client = client ?? HttpClient() {
-    _client.connectionTimeout = const Duration(seconds: 8);
+    _client.connectionTimeout = const Duration(seconds: 10);
+    _client.badCertificateCallback = (cert, host, port) => true;
   }
 
   final String baseUrl;

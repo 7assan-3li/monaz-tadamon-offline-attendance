@@ -65,7 +65,23 @@
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1 w-full space-y-8">
 
-        <!-- Flash Notifications -->
+        <!-- Flash Notifications & Errors -->
+        @if ($errors->any())
+            <div class="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-200 text-xs shadow-xl space-y-2">
+                <div class="font-bold flex items-center gap-2 text-rose-300 text-sm">
+                    <svg class="w-5 h-5 flex-shrink-0 text-rose-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span>تنبيه: تعذر إتمام العملية بسبب الملاحظات التالية:</span>
+                </div>
+                <ul class="list-disc list-inside pr-6 space-y-1 text-rose-200 font-medium">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         @if(session('error'))
             <div class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-center gap-3 shadow-lg">
                 <svg class="w-5 h-5 flex-shrink-0 text-rose-400" fill="currentColor" viewBox="0 0 20 20">
@@ -224,12 +240,12 @@
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div class="sm:col-span-2">
                         <label for="new_club_name" class="block text-xs font-bold text-slate-300 mb-1">اسم النادي الرياضي <span class="text-rose-400">*</span></label>
-                        <input type="text" name="club_name" id="new_club_name" placeholder="مثال: نادي شعب حضرموت الرياضي" required
+                        <input type="text" name="club_name" id="new_club_name" value="{{ old('club_name') }}" placeholder="مثال: نادي شعب حضرموت الرياضي" required
                                class="w-full bg-[#081220] border border-slate-700 rounded-xl px-3.5 py-2.5 text-white text-xs font-semibold focus:outline-none focus:border-blue-500">
                     </div>
                     <div>
                         <label for="new_club_code" class="block text-xs font-bold text-slate-300 mb-1">رمز كودي <span class="text-rose-400">*</span></label>
-                        <input type="text" name="club_code" id="new_club_code" placeholder="SHAB" maxlength="10" required
+                        <input type="text" name="club_code" id="new_club_code" value="{{ old('club_code') }}" placeholder="SHAB" maxlength="15" required
                                class="w-full bg-[#081220] border border-slate-700 rounded-xl px-3.5 py-2.5 text-amber-400 text-xs font-mono font-bold uppercase text-center focus:outline-none focus:border-blue-500">
                     </div>
                 </div>
@@ -237,17 +253,17 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label for="new_season" class="block text-xs font-bold text-slate-300 mb-1">الموسم الرياضي <span class="text-rose-400">*</span></label>
-                        <input type="text" name="season" id="new_season" value="2026/2027" required
+                        <input type="text" name="season" id="new_season" value="{{ old('season', '2026/2027') }}" required
                                class="w-full bg-[#081220] border border-slate-700 rounded-xl px-3.5 py-2 text-white text-xs font-semibold focus:outline-none">
                     </div>
 
                     <div>
                         <label class="block text-xs font-bold text-slate-300 mb-1">لون هوية النادي</label>
                         <div class="flex items-center gap-2">
-                            <input type="color" name="primary_color_hex" id="new_color_picker" value="#DC2626"
+                            <input type="color" name="primary_color_hex" id="new_color_picker" value="{{ old('primary_color_hex', '#DC2626') }}"
                                    onchange="document.getElementById('new_color_text').value = this.value.toUpperCase()"
                                    class="w-8 h-8 rounded-lg border border-slate-700 bg-transparent cursor-pointer p-0.5">
-                            <input type="text" id="new_color_text" value="#DC2626"
+                            <input type="text" id="new_color_text" value="{{ old('primary_color_hex', '#DC2626') }}"
                                    onkeyup="if(/^#[0-9A-Fa-f]{6}$/.test(this.value)) document.getElementById('new_color_picker').value = this.value;"
                                    class="flex-1 bg-[#081220] border border-slate-700 rounded-xl px-3 py-1.5 text-white text-xs font-mono font-bold">
                         </div>
@@ -257,12 +273,12 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label for="new_admin" class="block text-[11px] font-bold text-slate-300 mb-1">المشرف الإداري</label>
-                        <input type="text" name="admin_name" id="new_admin" placeholder="اسم الإداري"
+                        <input type="text" name="admin_name" id="new_admin" value="{{ old('admin_name') }}" placeholder="اسم الإداري"
                                class="w-full bg-[#081220] border border-slate-700 rounded-xl px-3 py-2 text-white text-xs">
                     </div>
                     <div>
                         <label for="new_manager" class="block text-[11px] font-bold text-slate-300 mb-1">المدير الفني</label>
-                        <input type="text" name="manager_name" id="new_manager" placeholder="اسم المدرب"
+                        <input type="text" name="manager_name" id="new_manager" value="{{ old('manager_name') }}" placeholder="اسم المدرب"
                                class="w-full bg-[#081220] border border-slate-700 rounded-xl px-3 py-2 text-white text-xs">
                     </div>
                 </div>
@@ -298,6 +314,11 @@
         function closeNewClubModal() {
             document.getElementById('new_club_modal').classList.add('hidden');
         }
+        @if ($errors->any())
+            document.addEventListener('DOMContentLoaded', function() {
+                openNewClubModal();
+            });
+        @endif
     </script>
 </body>
 </html>

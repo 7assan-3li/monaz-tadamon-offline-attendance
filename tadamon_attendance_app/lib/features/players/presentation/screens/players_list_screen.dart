@@ -64,7 +64,7 @@ class _PlayersListScreenState extends State<PlayersListScreen> {
       floatingActionButton: isMaster
           ? FloatingActionButton.extended(
               onPressed: () => _edit(context),
-              backgroundColor: AppColors.royalBlue,
+              backgroundColor: ClubThemeService.instance.currentPrimaryColor,
               foregroundColor: Colors.white,
               elevation: 3,
               icon: const Icon(LucideIcons.userPlus, size: 18),
@@ -536,7 +536,7 @@ class _PlayersListScreenState extends State<PlayersListScreen> {
                           FilledButton.icon(
                             onPressed: () => _edit(context),
                             style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.royalBlue,
+                              backgroundColor: ClubThemeService.instance.currentPrimaryColor,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 20,
@@ -1407,7 +1407,7 @@ class _PlayersListScreenState extends State<PlayersListScreen> {
                       _edit(context, player: player);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.royalBlue,
+                      backgroundColor: ClubThemeService.instance.currentPrimaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(

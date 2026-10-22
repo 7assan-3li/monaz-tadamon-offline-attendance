@@ -227,16 +227,21 @@ class LicensePortalController extends Controller
         ]);
     }
 
-    public function deleteDevice(string $id, ?string $clubId = null): RedirectResponse
+    public function deleteDevice(Request $request, string $clubId, ?string $deviceId = null): RedirectResponse
     {
-        $device = ClubDevice::where('id', $id)->orWhere('device_id', $id)->first();
-        $targetClubId = $clubId ?: ($device?->club_id ?? 'tadamon_hadhramaut');
+        $targetDeviceId = $deviceId ?: $clubId;
+        $device = ClubDevice::where(function ($q) use ($targetDeviceId) {
+            $q->where('id', $targetDeviceId)->orWhere('device_id', $targetDeviceId);
+        })->first();
+
+        $targetClubId = $device?->club_id ?: ($deviceId ? $clubId : 'tadamon_hadhramaut');
 
         if ($device) {
             $device->delete();
+            return redirect()->route('clubs.show', $targetClubId)->with('success', 'تم حذف الجهاز من سجل النادي بنجاح.');
         }
 
-        return redirect()->route('clubs.show', $targetClubId)->with('success', 'تم حذف الجهاز من سجل النادي بنجاح.');
+        return redirect()->route('clubs.show', $targetClubId)->with('error', 'تعذر العثور على الجهاز المطلوب حذفه.');
     }
 
     private function renderClubPortal(ClubProfile $club): \Symfony\Component\HttpFoundation\Response

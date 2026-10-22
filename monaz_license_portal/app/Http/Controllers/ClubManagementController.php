@@ -28,15 +28,42 @@ class ClubManagementController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        // Normalize code and primary color before validation
+        $rawCode = trim((string) $request->input('club_code', ''));
+        if ($rawCode !== '') {
+            $rawCode = strtoupper(preg_replace('/[^A-Za-z0-9_-]/', '', $rawCode) ?? '');
+        }
+        if ($rawCode === '') {
+            $rawCode = 'CLUB' . mt_rand(100, 999);
+        }
+        $request->merge(['club_code' => $rawCode]);
+
+        $rawColor = trim((string) $request->input('primary_color_hex', '#0F48A2'));
+        if (!str_starts_with($rawColor, '#')) {
+            $rawColor = '#' . $rawColor;
+        }
+        if (!preg_match('/^#[A-Fa-f0-9]{6}$/', $rawColor)) {
+            $rawColor = '#0F48A2';
+        }
+        $request->merge(['primary_color_hex' => strtoupper($rawColor)]);
+
         $validated = $request->validate([
             'id' => 'nullable|string|max:50|regex:/^[a-z0-9_]+$/|unique:club_profiles,id',
             'club_name' => 'required|string|max:120',
-            'club_code' => 'required|string|max:10|regex:/^[A-Z0-9]+$/|unique:club_profiles,club_code',
+            'club_code' => 'required|string|min:2|max:15|regex:/^[A-Z0-9_-]+$/|unique:club_profiles,club_code',
             'season' => 'required|string|max:50',
-            'primary_color_hex' => 'required|string|regex:/^#[a-fA-F0-9]{6}$/',
+            'primary_color_hex' => 'required|string|regex:/^#[A-F0-9]{6}$/i',
             'admin_name' => 'nullable|string|max:100',
             'manager_name' => 'nullable|string|max:100',
             'logo' => 'nullable|image|mimes:png,jpg,jpeg,svg,webp|max:2048',
+        ], [
+            'club_name.required' => 'يرجى إدخال اسم النادي الرياضي.',
+            'club_code.required' => 'يرجى إدخال رمز كودي للنادي (مثل: SHAB أو AHLI).',
+            'club_code.unique' => 'الرمز الكودي مسجل بالفعل لنادٍ آخر، يرجى اختيار رمز مختلف.',
+            'club_code.regex' => 'الرمز الكودي يجب أن يتكون من أحرف إنجليزية وأرقام فقط.',
+            'primary_color_hex.required' => 'يرجى اختيار لون هوية النادي.',
+            'logo.image' => 'ملف الشعار يجب أن يكون صورة بصيغة صالحة (PNG, JPG, SVG, WebP).',
+            'logo.max' => 'حجم صورة الشعار يجب ألا يتجاوز 2 ميجابايت.',
         ]);
 
         $code = strtoupper(trim($validated['club_code']));

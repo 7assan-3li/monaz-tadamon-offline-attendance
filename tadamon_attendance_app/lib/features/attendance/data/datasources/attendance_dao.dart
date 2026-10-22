@@ -165,6 +165,33 @@ class AttendanceDao {
       _database.sessions,
     )..where((row) => row.sessionUuid.equals(id))).getSingleOrNull();
     if (session == null) return null;
+
+    // If session is an unlocked draft, dynamically sync any newly added players
+    if (!session.isLocked && !session.isDispatched) {
+      final existingRecords = await (_database.select(_database.attendanceRecords)
+            ..where((row) => row.sessionUuid.equals(id)))
+          .get();
+      final existingPlayerIds = existingRecords.map((r) => r.playerId).toSet();
+
+      final activeTeamPlayers = await (_database.select(_database.players)
+            ..where((row) => row.teamId.equals(session.teamId) & row.isArchived.equals(false)))
+          .get();
+
+      for (final player in activeTeamPlayers) {
+        if (!existingPlayerIds.contains(player.id)) {
+          await _database.into(_database.attendanceRecords).insert(
+                AttendanceRecordsCompanion.insert(
+                  id: '$id-${player.id}',
+                  sessionUuid: id,
+                  playerId: player.id,
+                  status: PlayerAttendanceStatus.unmarked.value,
+                ),
+                mode: InsertMode.insertOrIgnore,
+              );
+        }
+      }
+    }
+
     final query = _database.select(_database.attendanceRecords).join([
       innerJoin(
         _database.players,

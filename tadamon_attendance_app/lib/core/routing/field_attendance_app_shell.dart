@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:tadamon_attendance_app/core/constants/app_colors.dart';
+import 'package:tadamon_attendance_app/core/database/app_database.dart';
 import 'package:tadamon_attendance_app/core/di/service_locator.dart';
 import 'package:tadamon_attendance_app/features/settings/domain/repositories/settings_repository.dart';
 import 'package:tadamon_attendance_app/features/settings/presentation/widgets/pin_pad_modal.dart';
@@ -18,7 +19,40 @@ class FieldAttendanceAppShell extends StatelessWidget {
   final VoidCallback? onExitFieldMode;
 
   Future<void> _handleExit(BuildContext context) async {
-    final enteredPin = await showPinPadModal(context);
+    bool hasCustomPin = false;
+    try {
+      if (serviceLocator.isRegistered<AppDatabase>()) {
+        final db = serviceLocator<AppDatabase>();
+        final row = await (db.select(db.clubSettings)..where((t) => t.id.equals(1))).getSingleOrNull();
+        hasCustomPin = row?.pinCodeHash != null;
+      }
+    } catch (_) {}
+
+    if (!hasCustomPin) {
+      // User never configured a PIN: allow return to master directly without locking them out
+      onExitFieldMode?.call();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'تمت العودة لوضع الإدارة بنجاح (يمكنك تعيين رمز PIN من إعدادات النادي لحماية الإدارة).',
+              style: TextStyle(fontFamily: 'Cairo'),
+            ),
+            backgroundColor: AppColors.present,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
+
+    if (!context.mounted) return;
+
+    final enteredPin = await showPinPadModal(
+      context,
+      title: 'تأكيد العودة لوضع الإدارة',
+      subtitle: 'أدخل رمز PIN المكون من 4 أرقام المعتمد لجهاز الإدارة',
+    );
     if (enteredPin == null || !context.mounted) return;
 
     var isAuthorized = false;
