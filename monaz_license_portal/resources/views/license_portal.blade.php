@@ -98,15 +98,43 @@
                     <span>دليل كافة الأندية</span>
                 </a>
 
-                <a href="{{ route('download.apk') }}"
-                   title="تحميل تطبيق الأندرويد الميداني المعتمد (APK)"
-                   class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white transition shadow-md border border-white/20"
-                   style="background: linear-gradient(135deg, {{ $club->primary_color_hex ?? '#0F48A2' }}, #2563eb);">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                    </svg>
-                    <span>تحميل APK</span>
-                </a>
+                <div class="relative inline-block text-right">
+                    <button id="downloadApkDropdownBtn" type="button"
+                       title="تحميل تطبيق الأندرويد الميداني المعتمد (APK)"
+                       class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white transition shadow-md border border-white/20"
+                       style="background: linear-gradient(135deg, {{ $club->primary_color_hex ?? '#0F48A2' }}, #2563eb);">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        <span>تحميل APK</span>
+                        <svg class="w-3.5 h-3.5 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    <div id="downloadApkMenu" class="hidden absolute left-0 mt-2 w-72 rounded-2xl bg-[#0b1424] border border-slate-700/80 shadow-2xl p-2 z-50 text-right space-y-1">
+                        <a href="{{ route('download.apk') }}" class="flex items-start gap-2.5 p-2.5 rounded-xl hover:bg-slate-800 transition text-white">
+                            <span class="text-lg">📦</span>
+                            <div>
+                                <div class="text-xs font-bold text-emerald-400">الحزمة الشاملة (Universal)</div>
+                                <div class="text-[10px] text-slate-400">لكافة الأجهزة (Android 5+ حتى 15) • 72MB</div>
+                            </div>
+                        </a>
+                        <a href="{{ route('download.apk.arm64') }}" class="flex items-start gap-2.5 p-2.5 rounded-xl hover:bg-slate-800 transition text-white">
+                            <span class="text-lg">⚡</span>
+                            <div>
+                                <div class="text-xs font-bold text-blue-400">الأجهزة الحديثة (ARM64)</div>
+                                <div class="text-[10px] text-slate-400">هواتف سامسونج وشاومي الحديثة (سريعة) • 25MB</div>
+                            </div>
+                        </a>
+                        <a href="{{ route('download.apk.arm32') }}" class="flex items-start gap-2.5 p-2.5 rounded-xl hover:bg-slate-800 transition text-white">
+                            <span class="text-lg">📱</span>
+                            <div>
+                                <div class="text-xs font-bold text-amber-400">الأجهزة الاقتصادية (ARM32)</div>
+                                <div class="text-[10px] text-slate-400">الهواتف القديمة أو الاقتصادية • 24MB</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </header>
@@ -700,6 +728,20 @@
 
     <!-- Interactive Scripts & QR Generation -->
     <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const apkBtn = document.getElementById('downloadApkDropdownBtn');
+            const apkMenu = document.getElementById('downloadApkMenu');
+            if (apkBtn && apkMenu) {
+                apkBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    apkMenu.classList.toggle('hidden');
+                });
+                document.addEventListener('click', () => {
+                    apkMenu.classList.add('hidden');
+                });
+            }
+        });
+
         function toggleMode(mode) {
             const single = document.getElementById('single-section');
             const dual = document.getElementById('dual-section');

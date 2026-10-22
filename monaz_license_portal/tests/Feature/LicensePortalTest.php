@@ -122,6 +122,18 @@ class LicensePortalTest extends TestCase
         $this->assertContains($response->getStatusCode(), [200, 404]);
     }
 
+    public function test_can_download_arm64_apk(): void
+    {
+        $response = $this->get('/download/apk/arm64');
+        $this->assertContains($response->getStatusCode(), [200, 404]);
+    }
+
+    public function test_can_download_arm32_apk(): void
+    {
+        $response = $this->get('/download/apk/arm32');
+        $this->assertContains($response->getStatusCode(), [200, 404]);
+    }
+
     public function test_can_download_offline_tool(): void
     {
         $response = $this->get('/download/offline-tool');

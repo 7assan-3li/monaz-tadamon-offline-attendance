@@ -42,6 +42,42 @@ Route::get('/download/apk', function () {
     abort(404, 'ملف تطبيق الأندرويد غير متوفر حالياً.');
 })->name('download.apk');
 
+Route::get('/download/apk/arm64', function () {
+    $candidates = [
+        public_path('downloads/MONAZ-Tadamon-Attendance-arm64.apk'),
+        base_path('../releases/MONAZ-Tadamon-Attendance-arm64-v8a.apk'),
+        base_path('releases/MONAZ-Tadamon-Attendance-arm64-v8a.apk'),
+    ];
+
+    foreach ($candidates as $path) {
+        if (file_exists($path)) {
+            return response()->download($path, 'MONAZ-Tadamon-Attendance-arm64.apk', [
+                'Content-Type' => 'application/vnd.android.package-archive',
+            ]);
+        }
+    }
+
+    abort(404, 'ملف تطبيق الأندرويد (ARM64) غير متوفر حالياً.');
+})->name('download.apk.arm64');
+
+Route::get('/download/apk/arm32', function () {
+    $candidates = [
+        public_path('downloads/MONAZ-Tadamon-Attendance-arm32.apk'),
+        base_path('../releases/MONAZ-Tadamon-Attendance-armeabi-v7a.apk'),
+        base_path('releases/MONAZ-Tadamon-Attendance-armeabi-v7a.apk'),
+    ];
+
+    foreach ($candidates as $path) {
+        if (file_exists($path)) {
+            return response()->download($path, 'MONAZ-Tadamon-Attendance-arm32.apk', [
+                'Content-Type' => 'application/vnd.android.package-archive',
+            ]);
+        }
+    }
+
+    abort(404, 'ملف تطبيق الأندرويد (ARM32) غير متوفر حالياً.');
+})->name('download.apk.arm32');
+
 Route::get('/download/offline-tool', function () {
     $candidates = [
         public_path('downloads/بوابة_توليد_كود_التفعيل.html'),
