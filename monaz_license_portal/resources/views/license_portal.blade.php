@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>بوابة إدارة النادي وتراخيص الأجهزة | نادي تضامن حضرموت</title>
+    <title>بوابة إدارة النادي وتراخيص الأجهزة | {{ $club->club_name ?? 'نادي تضامن حضرموت' }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -24,7 +24,6 @@
         .club-accent-text {
             color: {{ $club->primary_color_hex ?? '#0F48A2' }};
         }
-        /* Custom scrollbar for textareas */
         textarea::-webkit-scrollbar {
             width: 6px;
         }
@@ -42,35 +41,63 @@
 </head>
 <body class="min-h-screen flex flex-col justify-between selection:bg-blue-600 selection:text-white">
 
-    <!-- Top Navigation Bar -->
+    <!-- Top Navigation Bar with Multi-Club Switcher -->
     <header class="border-b border-slate-800/80 bg-[#060c18]/90 backdrop-blur sticky top-0 z-50 shadow-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center space-x-3.5 space-x-reverse">
-                <div class="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg border border-white/10 overflow-hidden"
-                     style="background: linear-gradient(135deg, {{ $club->primary_color_hex ?? '#0F48A2' }}, #081220);">
-                    @if($club->logo_url)
-                        <img src="{{ $club->logo_url }}" alt="{{ $club->club_name }}" class="w-full h-full object-cover">
-                    @else
-                        <span class="text-white font-black text-xl tracking-tight">ت</span>
-                    @endif
-                </div>
+                <a href="{{ route('clubs.index') }}" title="العودة إلى دليل كافة الأندية" class="flex-shrink-0">
+                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg border border-white/10 overflow-hidden hover:scale-105 transition"
+                         style="background: linear-gradient(135deg, {{ $club->primary_color_hex ?? '#0F48A2' }}, #081220);">
+                        @if($club->logo_url)
+                            <img src="{{ $club->logo_url }}" alt="{{ $club->club_name }}" class="w-full h-full object-cover">
+                        @else
+                            <span class="text-white font-black text-xl tracking-tight">{{ mb_substr($club->club_name, 5, 1) ?: 'ت' }}</span>
+                        @endif
+                    </div>
+                </a>
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-base sm:text-lg font-black text-white tracking-wide">
                             {{ $club->club_name ?? 'نادي تضامن حضرموت الرياضي' }}
                         </h1>
+                        <span class="text-[11px] px-2 py-0.5 rounded-full font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">
+                            {{ $club->club_code ?? 'TDMN' }}
+                        </span>
                         <span class="text-[11px] px-2 py-0.5 rounded-full font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                            موسم {{ $club->season ?? '2026/2027' }}
+                            {{ $club->season ?? '2026/2027' }}
                         </span>
                     </div>
                     <p class="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                        بوابة التراخيص الرسمية والمزامنة الهجينة (MONAZ)
+                        بوابة التراخيص الرسمية والمزامنة الهجينة المعزولة (MONAZ)
                     </p>
                 </div>
             </div>
 
+            <!-- Quick Club Switcher & Navigation -->
             <div class="flex items-center gap-2 sm:gap-3">
+                @if(isset($allClubs) && count($allClubs) > 1)
+                    <div class="relative">
+                        <select onchange="if(this.value) window.location.href='/clubs/' + this.value"
+                                class="bg-[#081220] border border-slate-700 text-white text-xs font-bold rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 transition shadow-inner">
+                            <option value="" disabled>التبديل إلى نادٍ آخر...</option>
+                            @foreach($allClubs as $c)
+                                <option value="{{ $c->id }}" {{ $c->id === $club->id ? 'selected' : '' }}>
+                                    {{ $c->club_name }} ({{ $c->club_code ?? 'CLUB' }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
+
+                <a href="{{ route('clubs.index') }}"
+                   class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white bg-[#0e1c33] hover:bg-[#132747] transition border border-slate-700">
+                    <svg class="w-4 h-4 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    <span>دليل كافة الأندية</span>
+                </a>
+
                 <a href="{{ route('download.apk') }}"
                    title="تحميل تطبيق الأندرويد الميداني المعتمد (APK)"
                    class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white transition shadow-md border border-white/20"
@@ -78,12 +105,8 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                     </svg>
-                    <span>تحميل التطبيق (APK)</span>
+                    <span>تحميل APK</span>
                 </a>
-                <span class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    تشفير Ed25519 نشط
-                </span>
             </div>
         </div>
     </header>
@@ -117,7 +140,7 @@
             <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                 <div>
                     <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 mb-3">
-                        <span>⚡ نظام التراخيص والمزامنة اللاتزامنية الرياضية</span>
+                        <span>⚡ مساحة عمل معزولة: {{ $club->club_name }} ({{ $club->club_code ?? 'TDMN' }})</span>
                     </div>
                     <h2 class="text-2xl sm:text-3xl font-black text-white leading-tight">
                         إدارة هوية النادي وتراخيص الأجهزة الميدانية
@@ -158,7 +181,7 @@
                     <span class="text-[11px] text-slate-400 font-mono">Profile Config</span>
                 </div>
 
-                <form action="/club/update" method="POST" enctype="multipart/form-data" class="space-y-4">
+                <form action="/clubs/{{ $club->id }}/update" method="POST" enctype="multipart/form-data" class="space-y-4">
                     @csrf
 
                     <!-- Logo Upload with Preview -->
@@ -186,11 +209,18 @@
                         </div>
                     </div>
 
-                    <!-- Club Name -->
-                    <div>
-                        <label for="club_name" class="block text-xs font-bold text-slate-300 mb-1">اسم النادي الرسمي <span class="text-rose-400">*</span></label>
-                        <input type="text" name="club_name" id="club_name" value="{{ old('club_name', $club->club_name) }}" required
-                               class="w-full bg-[#081220] border border-slate-700 rounded-xl px-3.5 py-2 text-white text-xs font-semibold focus:outline-none focus:border-blue-500 transition">
+                    <!-- Club Name & Code -->
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="col-span-2">
+                            <label for="club_name" class="block text-xs font-bold text-slate-300 mb-1">اسم النادي <span class="text-rose-400">*</span></label>
+                            <input type="text" name="club_name" id="club_name" value="{{ old('club_name', $club->club_name) }}" required
+                                   class="w-full bg-[#081220] border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-semibold focus:outline-none focus:border-blue-500 transition">
+                        </div>
+                        <div>
+                            <label for="club_code" class="block text-xs font-bold text-slate-300 mb-1">الرمز الكودي</label>
+                            <input type="text" name="club_code" id="club_code" value="{{ old('club_code', $club->club_code ?? 'TDMN') }}" maxlength="10"
+                                   class="w-full bg-[#081220] border border-slate-700 rounded-xl px-2 py-2 text-amber-400 text-xs font-mono font-bold uppercase text-center focus:outline-none">
+                        </div>
                     </div>
 
                     <!-- Season -->
@@ -213,7 +243,7 @@
                         </div>
                         <!-- Preset Swatches -->
                         <div class="flex items-center gap-2 pt-1">
-                            <button type="button" onclick="setColor('#0F48A2')" class="w-6 h-6 rounded-full bg-[#0F48A2] border border-white/20 hover:scale-110 transition shadow-sm" title="أزرق تضامن حضرموت الملكي"></button>
+                            <button type="button" onclick="setColor('#0F48A2')" class="w-6 h-6 rounded-full bg-[#0F48A2] border border-white/20 hover:scale-110 transition shadow-sm" title="أزرق ملكي"></button>
                             <button type="button" onclick="setColor('#059669')" class="w-6 h-6 rounded-full bg-[#059669] border border-white/20 hover:scale-110 transition shadow-sm" title="أخضر زمردي"></button>
                             <button type="button" onclick="setColor('#DC2626')" class="w-6 h-6 rounded-full bg-[#DC2626] border border-white/20 hover:scale-110 transition shadow-sm" title="أحمر رياضي"></button>
                             <button type="button" onclick="setColor('#D97706')" class="w-6 h-6 rounded-full bg-[#D97706] border border-white/20 hover:scale-110 transition shadow-sm" title="أصفر ذهبي"></button>
@@ -255,16 +285,16 @@
                             🔑
                         </div>
                         <div>
-                            <h3 class="font-extrabold text-white text-lg">تسجيل وتوليد ترخيص جهاز معتمد</h3>
+                            <h3 class="font-extrabold text-white text-lg">تسجيل وتوليد ترخيص جهاز لنادي ({{ $club->club_name }})</h3>
                             <p class="text-xs text-slate-400">إصدار رمز تفعيل موقّع رقمياً بالمفتاح الخاص بموجب بصمة الجهاز العتادية</p>
                         </div>
                     </div>
-                    <span class="text-xs px-2.5 py-1 rounded-full font-bold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-                        Ed25519 Engine
+                    <span class="text-xs px-2.5 py-1 rounded-full font-bold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-mono">
+                        {{ $club->club_code ?? 'TDMN' }} Scope
                     </span>
                 </div>
 
-                <form action="/generate" method="POST" class="space-y-6">
+                <form action="/clubs/{{ $club->id }}/generate" method="POST" class="space-y-6">
                     @csrf
 
                     <!-- Mode Selection -->
@@ -309,7 +339,7 @@
                                 <label for="single_device_id" class="block text-xs font-bold text-slate-300 mb-1">
                                     بصمة الجهاز (Hardware Fingerprint) <span class="text-rose-400">*</span>
                                 </label>
-                                <input type="text" name="single_device_id" id="single_device_id" placeholder="TD-XXXX-XXXX"
+                                <input type="text" name="single_device_id" id="single_device_id" placeholder="{{ $club->club_code ?? 'TDMN' }}-XXXX-XXXX"
                                        class="w-full bg-[#081220] border border-slate-700 rounded-xl px-3.5 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-xs font-mono tracking-wider font-bold text-center"
                                        value="{{ old('single_device_id') }}">
                             </div>
@@ -334,7 +364,7 @@
                                 <label for="master_device_id" class="block text-xs font-bold text-slate-300 mb-1">
                                     بصمة جهاز الإدارة الرئيسي (Master) <span class="text-rose-400">*</span>
                                 </label>
-                                <input type="text" name="master_device_id" id="master_device_id" placeholder="TD-1111-2222"
+                                <input type="text" name="master_device_id" id="master_device_id" placeholder="{{ $club->club_code ?? 'TDMN' }}-1111-2222"
                                        class="w-full bg-[#081220] border border-slate-700 rounded-xl px-3.5 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-xs font-mono tracking-wider font-bold text-center">
                             </div>
 
@@ -342,7 +372,7 @@
                                 <label for="field_device_id" class="block text-xs font-bold text-slate-300 mb-1">
                                     بصمة جهاز المحضر الميداني (Field) <span class="text-rose-400">*</span>
                                 </label>
-                                <input type="text" name="field_device_id" id="field_device_id" placeholder="TD-3333-4444"
+                                <input type="text" name="field_device_id" id="field_device_id" placeholder="{{ $club->club_code ?? 'TDMN' }}-3333-4444"
                                        class="w-full bg-[#081220] border border-slate-700 rounded-xl px-3.5 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-xs font-mono tracking-wider font-bold text-center">
                             </div>
                         </div>
@@ -390,7 +420,7 @@
                         </div>
                         <div>
                             <h3 class="text-lg font-black text-white">تم إصدار وتوقيع كود التفعيل الرقمي بنجاح</h3>
-                            <p class="text-xs text-slate-400">يمكنك نسخ الكود المشفر أو مسح رمز الـ QR مباشرة من كاميرا الهاتف داخل التطبيق</p>
+                            <p class="text-xs text-slate-400">مرتبط بنادي: <strong class="text-white">{{ $club->club_name }}</strong> (كود: {{ $club->club_code ?? 'TDMN' }})</p>
                         </div>
                     </div>
                     <span class="text-xs px-3 py-1 rounded-full font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
@@ -493,20 +523,20 @@
                         📱
                     </div>
                     <div>
-                        <h3 class="font-extrabold text-white text-lg">سجل الأجهزة المعتمدة للنادي (Registered Devices)</h3>
-                        <p class="text-xs text-slate-400">قائمة الأجهزة الإدارية والميدانية المرخصة رسمياً لموسم {{ $club->season ?? '2026/2027' }}</p>
+                        <h3 class="font-extrabold text-white text-lg">سجل أجهزة النادي المعتمدة ({{ $club->club_name }})</h3>
+                        <p class="text-xs text-slate-400">قائمة الأجهزة الإدارية والميدانية المرخصة حصراً لنادي {{ $club->club_name }} ({{ $club->club_code ?? 'TDMN' }})</p>
                     </div>
                 </div>
                 <div class="text-xs text-slate-400">
-                    إجمالي الأجهزة: <strong class="text-white font-mono">{{ count($devices) }}</strong>
+                    إجمالي أجهزة النادي: <strong class="text-white font-mono">{{ count($devices) }}</strong>
                 </div>
             </div>
 
             @if(count($devices) === 0)
                 <div class="text-center py-12 text-slate-400">
                     <div class="text-4xl mb-3">📋</div>
-                    <p class="text-sm font-semibold">لا توجد أجهزة مسجلة في سجل النادي حتى الآن.</p>
-                    <p class="text-xs text-slate-500 mt-1">قم بتوليد ترخيص جديد من النموذج أعلاه لإدراج الجهاز في السجل وتفعيل المزامنة.</p>
+                    <p class="text-sm font-semibold">لا توجد أجهزة مسجلة في سجل هذا النادي حتى الآن.</p>
+                    <p class="text-xs text-slate-500 mt-1">قم بتوليد ترخيص جديد من النموذج أعلاه لإدراج الجهاز في السجل وتفعيل المزامنة المعزولة.</p>
                 </div>
             @else
                 <div class="overflow-x-auto mt-6">
@@ -565,7 +595,7 @@
                                         @endif
                                     </td>
                                     <td class="py-3.5 px-4 text-center">
-                                        <form action="/devices/{{ $dev->id }}" method="POST" onsubmit="return confirm('هل أنت متأكد من حذف هذا الجهاز من سجل النادي؟');" class="inline">
+                                        <form action="/clubs/{{ $club->id }}/devices/{{ $dev->id }}" method="POST" onsubmit="return confirm('هل أنت متأكد من حذف هذا الجهاز من سجل النادي؟');" class="inline">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="text-rose-400 hover:text-rose-300 p-1.5 rounded-lg hover:bg-rose-500/10 transition" title="حذف الجهاز">
@@ -583,7 +613,27 @@
             @endif
         </div>
 
-        <!-- Section 5: Step-by-Step Activation Guide -->
+        <!-- Section 5: Per-Club Backup & Cloud Sync Center -->
+        <div class="bg-gradient-to-r from-[#0d1a30] to-[#0e2240] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div class="space-y-2">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <span>💾 مركز النسخ الاحتياطي المستقل لنادي {{ $club->club_name }}</span>
+                </div>
+                <h3 class="text-lg font-black text-white">تصدير وحفظ النسخة الاحتياطية الرسمية للنادي</h3>
+                <p class="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                    يتضمن ملف النسخة الاحتياطية هوية النادي، كافة الأجهزة المرخصة، كشوفات التمارين الميدانية المعتمدة، ولقطات المزامنة الخاصة بنادي <strong>{{ $club->club_name }}</strong> بمعزل تام عن باقي الأندية.
+                </p>
+            </div>
+            <a href="{{ route('clubs.backup.export', $club->id) }}"
+               class="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl font-black text-xs text-white bg-emerald-600 hover:bg-emerald-500 shadow-xl shadow-emerald-600/30 transition flex-shrink-0 border border-emerald-400/30">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                <span>تحميل النسخة الاحتياطية الكاملة (JSON Backup)</span>
+            </a>
+        </div>
+
+        <!-- Section 6: Step-by-Step Activation Guide -->
         <div class="bg-[#091526] rounded-3xl p-6 sm:p-8 border border-slate-800 text-xs text-slate-300 leading-relaxed shadow-xl">
             <h4 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
                 <span>📖</span>
@@ -645,7 +695,7 @@
 
     <!-- Footer -->
     <footer class="border-t border-slate-800/80 bg-[#060c18] py-6 text-center text-xs text-slate-500">
-        <p>نظام التحضير الميداني غير المتصل والمزامنة الهجينة (MONAZ) • نادي تضامن حضرموت الرياضي • حضرموت، اليمن</p>
+        <p>نظام التحضير الميداني غير المتصل والمزامنة الهجينة (MONAZ) • نادي {{ $club->club_name }} • حضرموت، اليمن</p>
     </footer>
 
     <!-- Interactive Scripts & QR Generation -->

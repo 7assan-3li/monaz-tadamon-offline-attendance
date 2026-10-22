@@ -1,13 +1,29 @@
 <?php
 
+use App\Http\Controllers\ClubManagementController;
 use App\Http\Controllers\LicensePortalController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', [LicensePortalController::class, 'index'])->name('license.index');
+// 1. دليل واستعراض الأندية الرياضية (Multi-Club Hub)
+Route::get('/', [ClubManagementController::class, 'index'])->name('license.index');
+Route::get('/clubs', [ClubManagementController::class, 'index'])->name('clubs.index');
+Route::post('/clubs', [ClubManagementController::class, 'store'])->name('clubs.store');
+
+// 2. إدارة وتراخيص نادي مخصص (Per-Club Workspace)
+Route::get('/clubs/{id}', [LicensePortalController::class, 'showClub'])->name('clubs.show');
+Route::post('/clubs/{id}/update', [LicensePortalController::class, 'updateClub'])->name('clubs.update');
+Route::post('/clubs/{id}/generate', [LicensePortalController::class, 'generate'])->name('clubs.generate');
+Route::delete('/clubs/{id}/devices/{deviceId}', [LicensePortalController::class, 'deleteDevice'])->name('clubs.devices.delete');
+
+// 3. تصدير وتحميل النسخة الاحتياطية المستقلة للنادي (Dedicated Club Backup)
+Route::get('/clubs/{id}/backup', [ClubManagementController::class, 'exportBackup'])->name('clubs.backup.export');
+
+// 4. المسارات المتوافقة مع الروابط السابقة (Legacy Backward Compatibility)
 Route::post('/generate', [LicensePortalController::class, 'generate'])->name('license.generate');
 Route::post('/club/update', [LicensePortalController::class, 'updateClub'])->name('club.update');
 Route::delete('/devices/{id}', [LicensePortalController::class, 'deleteDevice'])->name('devices.delete');
 
+// 5. روابط تنزيل الموارد الرسمية المعتمدة
 Route::get('/download/apk', function () {
     $candidates = [
         public_path('downloads/MONAZ-Tadamon-Attendance.apk'),

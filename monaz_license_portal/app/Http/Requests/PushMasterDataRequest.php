@@ -19,6 +19,7 @@ class PushMasterDataRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'club_id' => 'nullable|string|max:50',
             'source_device_id' => 'required|string',
             'version_timestamp' => 'nullable|integer',
             'club_profile' => 'nullable|array',

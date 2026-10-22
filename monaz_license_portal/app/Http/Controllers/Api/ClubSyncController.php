@@ -46,7 +46,11 @@ class ClubSyncController extends Controller
     public function pullMasterData(Request $request, GetClubMasterDataAction $action): JsonResponse
     {
         $clubId = $request->query('club_id');
-        $data = $action->execute(is_string($clubId) ? $clubId : null);
+        $deviceId = $request->query('device_id');
+        $data = $action->execute(
+            is_string($clubId) ? $clubId : null,
+            is_string($deviceId) ? $deviceId : null
+        );
 
         return response()->json([
             'status' => 'success',

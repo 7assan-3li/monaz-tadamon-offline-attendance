@@ -12,11 +12,15 @@ class GetClubMasterDataAction
     /**
      * @return array<string, mixed>|null
      */
-    public function execute(?string $clubId = null): ?array
+    public function execute(?string $clubId = null, ?string $deviceId = null): ?array
     {
+        if ($clubId === null && $deviceId !== null && $deviceId !== '') {
+            $clubId = \App\Models\ClubDevice::where('device_id', $deviceId)->value('club_id');
+        }
+
         $query = ClubMasterSnapshot::latest('version_timestamp');
 
-        if ($clubId !== null) {
+        if ($clubId !== null && $clubId !== '') {
             $query->where('club_id', $clubId);
         }
 

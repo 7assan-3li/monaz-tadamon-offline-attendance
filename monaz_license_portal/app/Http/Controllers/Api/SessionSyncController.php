@@ -27,7 +27,11 @@ class SessionSyncController extends Controller
     public function index(Request $request, GetClubSessionsAction $action): JsonResponse
     {
         $teamId = $request->query('team_id');
-        $sessions = $action->execute(is_string($teamId) ? $teamId : null);
+        $clubId = $request->query('club_id');
+        $sessions = $action->execute(
+            is_string($teamId) ? $teamId : null,
+            is_string($clubId) ? $clubId : null
+        );
 
         return response()->json([
             'status' => 'success',

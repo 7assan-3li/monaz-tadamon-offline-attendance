@@ -113,4 +113,44 @@ class ClubSyncApiTest extends TestCase
             'status' => 'approved',
         ]);
     }
+
+    public function test_master_data_is_strictly_isolated_between_clubs(): void
+    {
+        // 1. Club A (Tadamon) pushes snapshot
+        $this->postJson('/api/sync/master-data/push', [
+            'club_id' => 'tadamon_hadhramaut',
+            'source_device_id' => 'TD-TEST-MSTR-01',
+            'version_timestamp' => 1700000001,
+            'club_profile' => [
+                'club_name' => 'نادي تضامن حضرموت',
+            ],
+            'teams' => [['id' => 'tdmn_t1', 'name' => 'تضامن فريق 1']],
+            'players' => [['id' => 'tdmn_p1', 'name' => 'لاعب تضامن']],
+        ])->assertStatus(201);
+
+        // 2. Club B (Shabab) pushes snapshot
+        $this->postJson('/api/sync/master-data/push', [
+            'club_id' => 'shabab_almukalla',
+            'source_device_id' => 'SHAB-TEST-MSTR-01',
+            'version_timestamp' => 1700000002,
+            'club_profile' => [
+                'club_name' => 'نادي شباب المكلا',
+            ],
+            'teams' => [['id' => 'shab_t1', 'name' => 'شباب فريق 1']],
+            'players' => [['id' => 'shab_p1', 'name' => 'لاعب شباب']],
+        ])->assertStatus(201);
+
+        // 3. Pull for Tadamon
+        $pullTadamon = $this->getJson('/api/sync/master-data/pull?club_id=tadamon_hadhramaut');
+        $pullTadamon->assertStatus(200);
+        $pullTadamon->assertJsonPath('data.club_profile.club_name', 'نادي تضامن حضرموت');
+        $pullTadamon->assertJsonPath('data.players.0.name', 'لاعب تضامن');
+
+        // 4. Pull for Shabab
+        $pullShabab = $this->getJson('/api/sync/master-data/pull?club_id=shabab_almukalla');
+        $pullShabab->assertStatus(200);
+        $pullShabab->assertJsonPath('data.club_profile.club_name', 'نادي شباب المكلا');
+        $pullShabab->assertJsonPath('data.players.0.name', 'لاعب شباب');
+    }
 }
+
