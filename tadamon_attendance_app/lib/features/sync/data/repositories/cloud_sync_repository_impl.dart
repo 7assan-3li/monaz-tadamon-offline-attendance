@@ -1,6 +1,9 @@
 import 'package:drift/drift.dart';
 import 'package:tadamon_attendance_app/core/database/app_database.dart';
+import 'package:tadamon_attendance_app/core/di/service_locator.dart';
+import 'package:tadamon_attendance_app/core/security/license_parser.dart';
 import 'package:tadamon_attendance_app/core/theme/club_theme_service.dart';
+import 'package:tadamon_attendance_app/features/activation/data/datasources/license_local_data_source.dart';
 import 'package:tadamon_attendance_app/features/attendance/domain/entities/attendance_session.dart';
 import 'package:tadamon_attendance_app/features/attendance/domain/entities/player_attendance_item.dart';
 import 'package:tadamon_attendance_app/features/settings/domain/repositories/settings_repository.dart';
@@ -22,6 +25,29 @@ class CloudSyncRepositoryImpl implements CloudSyncRepository {
   final SettingsRepository settingsRepository;
   final TeamsRepository? teamsRepository;
   final AppDatabase? database;
+
+  Future<({String deviceId, String clubId})> getEffectiveDeviceScope() async {
+    String deviceId = 'field_device';
+    String clubId = 'tadamon_hadhramaut';
+    try {
+      if (serviceLocator.isRegistered<LicenseLocalDataSource>()) {
+        final licenseData =
+            await serviceLocator<LicenseLocalDataSource>().readLicense();
+        if (licenseData != null) {
+          deviceId = licenseData.deviceId;
+          if (serviceLocator.isRegistered<LicenseParser>()) {
+            final parsed =
+                serviceLocator<LicenseParser>().parse(licenseData.licenseKey);
+            final cId = parsed.payload['club_id'];
+            if (cId is String && cId.isNotEmpty) {
+              clubId = cId;
+            }
+          }
+        }
+      }
+    } catch (_) {}
+    return (deviceId: deviceId, clubId: clubId);
+  }
 
   @override
   Future<bool> checkConnectivity() => apiClient.checkHealth();
@@ -52,11 +78,21 @@ class CloudSyncRepositoryImpl implements CloudSyncRepository {
     required Map<String, dynamic> clubProfile,
     required List<Map<String, dynamic>> teams,
     required List<Map<String, dynamic>> players,
+    String? clubId,
     int? versionTimestamp,
   }) async {
+    final scope = await getEffectiveDeviceScope();
+    final effectiveDeviceId =
+        (sourceDeviceId.isNotEmpty && sourceDeviceId != 'TD-MSTR-01')
+            ? sourceDeviceId
+            : scope.deviceId;
+    final effectiveClubId = clubId ?? scope.clubId;
+
     final payload = {
-      'source_device_id': sourceDeviceId,
-      'version_timestamp': versionTimestamp ?? DateTime.now().millisecondsSinceEpoch,
+      'source_device_id': effectiveDeviceId,
+      'club_id': effectiveClubId,
+      'version_timestamp':
+          versionTimestamp ?? DateTime.now().millisecondsSinceEpoch,
       'club_profile': clubProfile,
       'teams': teams,
       'players': players,
@@ -68,7 +104,8 @@ class CloudSyncRepositoryImpl implements CloudSyncRepository {
 
   @override
   Future<CloudMasterData?> pullMasterData({String? clubId}) async {
-    final res = await apiClient.pullMasterData(clubId: clubId);
+    final effectiveClubId = clubId ?? (await getEffectiveDeviceScope()).clubId;
+    final res = await apiClient.pullMasterData(clubId: effectiveClubId);
     if (res == null || res['status'] != 'success' || res['data'] == null) {
       return null;
     }
@@ -141,7 +178,15 @@ class CloudSyncRepositoryImpl implements CloudSyncRepository {
   }
 
   @override
-  Future<bool> dispatchSessionToCloud(AttendanceSession session) async {
+  Future<bool> dispatchSessionToCloud(
+    AttendanceSession session, {
+    String? sourceDeviceId,
+    String? clubId,
+  }) async {
+    final scope = await getEffectiveDeviceScope();
+    final effectiveDeviceId = sourceDeviceId ?? scope.deviceId;
+    final effectiveClubId = clubId ?? scope.clubId;
+
     final absentees = session.items
         .where((i) =>
             i.status == PlayerAttendanceStatus.excused ||
@@ -157,8 +202,9 @@ class CloudSyncRepositoryImpl implements CloudSyncRepository {
     final payload = {
       'session_uuid': session.sessionUuid,
       'team_id': session.teamId,
+      'club_id': effectiveClubId,
       'session_date': session.date.toIso8601String(),
-      'source_device_id': 'field_device',
+      'source_device_id': effectiveDeviceId,
       'absentees': absentees,
       'present_count': session.presentCount,
       'excused_count': session.excusedCount,
@@ -172,8 +218,15 @@ class CloudSyncRepositoryImpl implements CloudSyncRepository {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> fetchDispatchedSessionsFromCloud({String? teamId}) {
-    return apiClient.fetchDispatchedSessions(teamId: teamId);
+  Future<List<Map<String, dynamic>>> fetchDispatchedSessionsFromCloud({
+    String? teamId,
+    String? clubId,
+  }) async {
+    final effectiveClubId = clubId ?? (await getEffectiveDeviceScope()).clubId;
+    return apiClient.fetchDispatchedSessions(
+      teamId: teamId,
+      clubId: effectiveClubId,
+    );
   }
 
   @override

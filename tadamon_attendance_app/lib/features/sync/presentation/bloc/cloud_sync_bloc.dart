@@ -59,6 +59,7 @@ class CloudSyncBloc extends Bloc<CloudSyncEvent, CloudSyncState> {
     emit(const CloudSyncLoading(operation: 'رفع بيانات اللاعبين والفرق للسحابة...'));
     final success = await repository.pushMasterData(
       sourceDeviceId: event.sourceDeviceId,
+      clubId: event.clubId,
       clubProfile: event.clubProfile,
       teams: event.teams,
       players: event.players,
@@ -99,7 +100,11 @@ class CloudSyncBloc extends Bloc<CloudSyncEvent, CloudSyncState> {
     Emitter<CloudSyncState> emit,
   ) async {
     emit(const CloudSyncLoading(operation: 'ترحيل الحصة التدريبية إلى السحابة...'));
-    final success = await repository.dispatchSessionToCloud(event.session);
+    final success = await repository.dispatchSessionToCloud(
+      event.session,
+      sourceDeviceId: event.sourceDeviceId,
+      clubId: event.clubId,
+    );
 
     if (success) {
       emit(SessionDispatchedCloudState(
@@ -118,7 +123,10 @@ class CloudSyncBloc extends Bloc<CloudSyncEvent, CloudSyncState> {
     Emitter<CloudSyncState> emit,
   ) async {
     emit(const CloudSyncLoading(operation: 'جلب الحصص المرحّلة من السحابة...'));
-    final sessions = await repository.fetchDispatchedSessionsFromCloud(teamId: event.teamId);
+    final sessions = await repository.fetchDispatchedSessionsFromCloud(
+      teamId: event.teamId,
+      clubId: event.clubId,
+    );
     emit(CloudSessionsFetchedState(sessions: sessions));
   }
 

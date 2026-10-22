@@ -5,6 +5,8 @@ import 'package:tadamon_attendance_app/core/di/service_locator.dart';
 import 'package:tadamon_attendance_app/features/settings/domain/repositories/settings_repository.dart';
 import 'package:tadamon_attendance_app/features/settings/presentation/widgets/pin_pad_modal.dart';
 
+import 'package:tadamon_attendance_app/features/sync/presentation/widgets/quick_cloud_sync_modal.dart';
+
 class FieldAttendanceAppShell extends StatelessWidget {
   const FieldAttendanceAppShell({
     required this.child,
@@ -67,6 +69,12 @@ class FieldAttendanceAppShell extends StatelessWidget {
                 ],
               ),
               actions: [
+                IconButton(
+                  onPressed: () => QuickCloudSyncModal.show(context),
+                  icon: const Icon(LucideIcons.cloud,
+                      size: 18, color: Color(0xFF38BDF8)),
+                  tooltip: 'مزامنة السحابة',
+                ),
                 TextButton.icon(
                   onPressed: () => _handleExit(context),
                   icon: const Icon(LucideIcons.lockKeyhole,

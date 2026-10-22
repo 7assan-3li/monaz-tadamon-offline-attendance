@@ -17,12 +17,15 @@ import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:tadamon_attendance_app/core/security/license_parser.dart';
 import 'package:tadamon_attendance_app/core/theme/club_theme_service.dart';
 import 'package:tadamon_attendance_app/core/widgets/club_logo_widget.dart';
+import 'package:tadamon_attendance_app/features/activation/data/datasources/license_local_data_source.dart';
 import 'package:tadamon_attendance_app/features/backup/domain/services/backup_file_service.dart';
 import 'package:tadamon_attendance_app/features/backup/domain/usecases/create_backup_use_case.dart';
 import 'package:tadamon_attendance_app/features/backup/domain/usecases/restore_backup_use_case.dart';
 import 'package:tadamon_attendance_app/features/settings/presentation/screens/club_themes_screen.dart';
+import 'package:tadamon_attendance_app/features/sync/presentation/widgets/quick_cloud_sync_modal.dart';
 import 'package:tadamon_attendance_app/features/teams/presentation/bloc/teams_bloc.dart';
 import 'package:tadamon_attendance_app/features/teams/presentation/screens/teams_screen.dart';
 import 'package:tadamon_attendance_app/core/database/app_database.dart';
@@ -845,6 +848,30 @@ class _SettingsContent extends StatelessWidget {
                     ),
                   ),
                 ],
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => QuickCloudSyncModal.show(context),
+                    icon: const Icon(LucideIcons.sparkles, size: 15),
+                    label: const Text(
+                      'فتح نافذة المزامنة الفورية الموحدة ⚡',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF0284C7),
+                      side: const BorderSide(color: Color(0xFFBAE6FD)),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           );
@@ -855,6 +882,24 @@ class _SettingsContent extends StatelessWidget {
 
   Future<void> _handlePushMasterData(BuildContext context) async {
     final bloc = context.read<CloudSyncBloc>();
+
+    String deviceId = '';
+    String? clubId;
+    try {
+      if (serviceLocator.isRegistered<LicenseLocalDataSource>()) {
+        final licenseData =
+            await serviceLocator<LicenseLocalDataSource>().readLicense();
+        if (licenseData != null) {
+          deviceId = licenseData.deviceId;
+          if (serviceLocator.isRegistered<LicenseParser>()) {
+            final parsed =
+                serviceLocator<LicenseParser>().parse(licenseData.licenseKey);
+            final c = parsed.payload['club_id'];
+            if (c is String && c.isNotEmpty) clubId = c;
+          }
+        }
+      }
+    } catch (_) {}
 
     final clubProfile = {
       'club_name': settings.clubName.isNotEmpty ? settings.clubName : 'نادي تضامن حضرموت الرياضي',
@@ -893,7 +938,8 @@ class _SettingsContent extends StatelessWidget {
     }
 
     bloc.add(PushMasterDataCloudEvent(
-      sourceDeviceId: 'TD-MSTR-01',
+      sourceDeviceId: deviceId,
+      clubId: clubId,
       clubProfile: clubProfile,
       teams: teamsData,
       players: playersData,

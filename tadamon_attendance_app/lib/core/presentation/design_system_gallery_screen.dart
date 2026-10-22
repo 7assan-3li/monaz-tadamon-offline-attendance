@@ -18,6 +18,7 @@ import 'package:tadamon_attendance_app/features/teams/presentation/bloc/teams_bl
 import 'package:tadamon_attendance_app/features/teams/domain/entities/club_team.dart';
 import 'package:tadamon_attendance_app/core/theme/club_theme_service.dart';
 import 'package:tadamon_attendance_app/core/widgets/club_logo_widget.dart';
+import 'package:tadamon_attendance_app/features/sync/presentation/widgets/quick_cloud_sync_modal.dart';
 
 class DesignSystemGalleryScreen extends StatefulWidget {
   const DesignSystemGalleryScreen({this.onNavigateTab, super.key});
@@ -224,6 +225,15 @@ class _DesignSystemGalleryScreenState extends State<DesignSystemGalleryScreen> {
               ),
             ],
           ),
+        ),
+        IconButton(
+          icon: const Icon(
+            LucideIcons.cloud,
+            size: 20,
+            color: Colors.white,
+          ),
+          tooltip: 'المزامنة السحابية الفورية',
+          onPressed: () => QuickCloudSyncModal.show(context),
         ),
         IconButton(
           icon: const Icon(
@@ -1120,6 +1130,64 @@ class _DesignSystemGalleryScreenState extends State<DesignSystemGalleryScreen> {
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 8),
+        InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => QuickCloudSyncModal.show(context),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF0284C7).withValues(alpha: 0.12),
+                  const Color(0xFF0EA5E9).withValues(alpha: 0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFBAE6FD)),
+            ),
+            child: Row(
+              children: [
+                const SquircleIconContainer(
+                  icon: LucideIcons.cloud,
+                  color: Color(0xFF0284C7),
+                  semanticLabel: 'المزامنة السحابية',
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'المزامنة السحابية الفورية',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        'مزامنة كشوفات اللاعبين والحصص بنقرة واحدة مع السيرفر',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 10.5,
+                          color: Color(0xFF0284C7),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  LucideIcons.chevronLeft,
+                  size: 18,
+                  color: Colors.blue.shade700,
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );

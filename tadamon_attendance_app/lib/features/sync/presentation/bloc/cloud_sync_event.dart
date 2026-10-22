@@ -31,12 +31,14 @@ class PushMasterDataCloudEvent extends CloudSyncEvent {
   final Map<String, dynamic> clubProfile;
   final List<Map<String, dynamic>> teams;
   final List<Map<String, dynamic>> players;
+  final String? clubId;
 
   const PushMasterDataCloudEvent({
     required this.sourceDeviceId,
     required this.clubProfile,
     required this.teams,
     required this.players,
+    this.clubId,
   });
 }
 
@@ -47,12 +49,20 @@ class PullMasterDataCloudEvent extends CloudSyncEvent {
 
 class DispatchSessionCloudEvent extends CloudSyncEvent {
   final AttendanceSession session;
-  const DispatchSessionCloudEvent(this.session);
+  final String? clubId;
+  final String? sourceDeviceId;
+
+  const DispatchSessionCloudEvent(
+    this.session, {
+    this.clubId,
+    this.sourceDeviceId,
+  });
 }
 
 class FetchCloudSessionsEvent extends CloudSyncEvent {
   final String? teamId;
-  const FetchCloudSessionsEvent({this.teamId});
+  final String? clubId;
+  const FetchCloudSessionsEvent({this.teamId, this.clubId});
 }
 
 class ApproveCloudSessionEvent extends CloudSyncEvent {

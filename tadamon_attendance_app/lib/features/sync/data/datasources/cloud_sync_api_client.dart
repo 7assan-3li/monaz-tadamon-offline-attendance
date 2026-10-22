@@ -87,9 +87,12 @@ class CloudSyncApiClient {
     }
   }
 
-  Future<List<Map<String, dynamic>>> fetchDispatchedSessions({String? teamId}) async {
+  Future<List<Map<String, dynamic>>> fetchDispatchedSessions({String? teamId, String? clubId}) async {
     try {
-      final query = teamId != null ? '?team_id=$teamId' : '';
+      final queryParams = <String>[];
+      if (teamId != null && teamId.isNotEmpty) queryParams.add('team_id=$teamId');
+      if (clubId != null && clubId.isNotEmpty) queryParams.add('club_id=$clubId');
+      final query = queryParams.isNotEmpty ? '?${queryParams.join('&')}' : '';
       final uri = Uri.parse('$baseUrl/api/sync/sessions$query');
       final request = await _client.getUrl(uri);
       final response = await request.close().timeout(const Duration(seconds: 10));

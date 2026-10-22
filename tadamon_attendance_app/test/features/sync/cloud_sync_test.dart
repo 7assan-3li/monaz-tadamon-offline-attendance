@@ -31,6 +31,7 @@ class _MockCloudSyncRepository implements CloudSyncRepository {
     required Map<String, dynamic> clubProfile,
     required List<Map<String, dynamic>> teams,
     required List<Map<String, dynamic>> players,
+    String? clubId,
     int? versionTimestamp,
   }) async => pushSuccess;
 
@@ -53,10 +54,17 @@ class _MockCloudSyncRepository implements CloudSyncRepository {
   }
 
   @override
-  Future<bool> dispatchSessionToCloud(AttendanceSession session) async => dispatchSuccess;
+  Future<bool> dispatchSessionToCloud(
+    AttendanceSession session, {
+    String? sourceDeviceId,
+    String? clubId,
+  }) async => dispatchSuccess;
 
   @override
-  Future<List<Map<String, dynamic>>> fetchDispatchedSessionsFromCloud({String? teamId}) async {
+  Future<List<Map<String, dynamic>>> fetchDispatchedSessionsFromCloud({
+    String? teamId,
+    String? clubId,
+  }) async {
     return [
       {
         'session_uuid': 'cloud_sess_01',

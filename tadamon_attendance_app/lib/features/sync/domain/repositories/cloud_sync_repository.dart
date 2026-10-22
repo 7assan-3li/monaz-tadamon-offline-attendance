@@ -18,14 +18,22 @@ abstract interface class CloudSyncRepository {
     required Map<String, dynamic> clubProfile,
     required List<Map<String, dynamic>> teams,
     required List<Map<String, dynamic>> players,
+    String? clubId,
     int? versionTimestamp,
   });
 
   Future<CloudMasterData?> pullMasterData({String? clubId});
 
-  Future<bool> dispatchSessionToCloud(AttendanceSession session);
+  Future<bool> dispatchSessionToCloud(
+    AttendanceSession session, {
+    String? sourceDeviceId,
+    String? clubId,
+  });
 
-  Future<List<Map<String, dynamic>>> fetchDispatchedSessionsFromCloud({String? teamId});
+  Future<List<Map<String, dynamic>>> fetchDispatchedSessionsFromCloud({
+    String? teamId,
+    String? clubId,
+  });
 
   Future<bool> approveSessionOnCloud(String sessionUuid, {String? approverDeviceId});
 }
