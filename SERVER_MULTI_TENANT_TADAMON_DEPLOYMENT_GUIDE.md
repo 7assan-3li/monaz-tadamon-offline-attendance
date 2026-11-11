@@ -11,7 +11,7 @@
 | **اسم المشروع / المجلد** | **`attendance`** |
 | **المسار الكامل على الخادم** | **`/home/hasan/apps/attendance`** |
 | **النطاق الرسمي (Domain)** | **`attendance.monaz.dev`** |
-| **المنفذ الداخلي المعزول (Host Port)** | **`127.0.0.1:8004:80`** |
+| **المنفذ الداخلي المعزول (Host Port)** | **`127.0.0.1:8005:80`** |
 | **اسم الحاوية (Container Name)** | `attendance_app` |
 | **شبكة الدوكر (Docker Network)** | `attendance_network` |
 | **مستخدم السيرفر** | `hasan` (صلاحيات `sudo` و `docker`) |
@@ -27,8 +27,8 @@
 | `127.0.0.1:8001:80` | **WINNER GYM** | `/home/hasan/apps/winner-gym` | `winnergym1.com` | ✅ نشط |
 | `127.0.0.1:8002:80` | **GOBAN API** | `/home/hasan/apps/goban-system` | `api.gobanpharma.com` | ✅ نشط |
 | `127.0.0.1:8003:80` | **GOBAN Admin Web** | `/home/hasan/apps/goban-system` | `gobanpharma.com` | ✅ نشط |
-| **`127.0.0.1:8004:80`** | **Attendance Portal & Sync** | **`/home/hasan/apps/attendance`** | **`attendance.monaz.dev`** | 🚀 **قيد التشغيل الآن** |
-| `127.0.0.1:8005:80` | مشروع إضافي مستقبلي | `/home/hasan/apps/<app5>` | `app5.yourdomain.com` | ⚪ شاغر |
+| `127.0.0.1:8004:80` | **Tadamon Official Club Web** | `/home/hasan/apps/tadamon` | المنصة الجماهيرية للنادي | ✅ نشط |
+| **`127.0.0.1:8005:80`** | **Attendance Portal & Sync** | **`/home/hasan/apps/attendance`** | **`attendance.monaz.dev`** | 🚀 **قيد التشغيل الآن** |
 
 ---
 
@@ -71,7 +71,7 @@ docker compose up -d --build
 docker compose ps
 docker logs attendance_app -n 25
 ```
-*(ستظهر رسالة النجاح: `MONAZ Tadamon Attendance Portal & Sync API Started!` وتعمل داخلياً على `127.0.0.1:8004`).*
+*(ستظهر رسالة النجاح: `MONAZ Tadamon Attendance Portal & Sync API Started!` وتعمل داخلياً على `127.0.0.1:8005`).*
 
 ---
 
@@ -90,7 +90,7 @@ server {
     client_max_body_size 100M;
 
     location / {
-        proxy_pass http://127.0.0.1:8004;
+        proxy_pass http://127.0.0.1:8005;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

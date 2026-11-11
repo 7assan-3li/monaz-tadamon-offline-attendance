@@ -6,7 +6,7 @@ services:
     container_name: attendance_app
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8004:80"   # المنفذ الشاغر المخصص على سيرفر Contabo
+      - "127.0.0.1:8005:80"   # المنفذ الشاغر المخصص على سيرفر Contabo
     environment:
       - APP_NAME=بوابة تضامن حضرموت
       - APP_ENV=production
