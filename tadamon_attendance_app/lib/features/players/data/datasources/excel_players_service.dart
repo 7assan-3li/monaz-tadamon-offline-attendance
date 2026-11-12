@@ -127,7 +127,12 @@ class ExcelPlayersService {
     List<int> fileBytes, {
     required String defaultTeamId,
   }) {
-    final excel = Excel.decodeBytes(fileBytes);
+    final Excel excel;
+    try {
+      excel = Excel.decodeBytes(fileBytes);
+    } catch (e) {
+      throw FormatException('الملف المرفق غير صالح أو بصيغة غير مدعومة: $e');
+    }
     final warnings = <String>[];
     final parsedPlayers = <ClubPlayer>[];
 
