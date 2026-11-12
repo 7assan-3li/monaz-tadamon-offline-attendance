@@ -27,6 +27,12 @@ class PlayersRepositoryImpl implements PlayersRepository {
   }
 
   @override
+  Future<int> addPlayersBatch(List<ClubPlayer> players) {
+    _requireMaster();
+    return _dao.insertBatch(players);
+  }
+
+  @override
   Future<void> updatePlayer(ClubPlayer player) {
     _requireMaster();
     return _dao.update(player);

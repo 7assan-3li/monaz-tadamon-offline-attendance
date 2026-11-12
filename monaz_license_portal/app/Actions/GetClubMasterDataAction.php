@@ -28,14 +28,16 @@ class GetClubMasterDataAction
         $snapshot = $query->first();
 
         if ($snapshot === null) {
-            // Fallback to empty default
-            $club = ClubProfile::first();
+            $club = !empty($clubId)
+                ? (ClubProfile::find($clubId) ?? ClubProfile::where('club_code', strtoupper($clubId))->first())
+                : ClubProfile::first();
+
             return [
                 'club_profile' => [
-                    'club_name' => $club->club_name ?? 'نادي تضامن حضرموت الرياضي',
-                    'season' => $club->season ?? '2026/2027',
-                    'primary_color_hex' => $club->primary_color_hex ?? '#0F48A2',
-                    'logo_url' => $club->logo_url ?? null,
+                    'club_name' => $club?->club_name ?? 'النادي الرياضي',
+                    'season' => $club?->season ?? '2026/2027',
+                    'primary_color_hex' => $club?->primary_color_hex ?? '#0F48A2',
+                    'logo_url' => $club?->logo_url ?? null,
                 ],
                 'version_timestamp' => 0,
                 'teams' => [],

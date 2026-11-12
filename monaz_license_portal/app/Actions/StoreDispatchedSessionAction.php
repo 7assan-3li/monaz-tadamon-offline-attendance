@@ -17,7 +17,11 @@ class StoreDispatchedSessionAction
         $clubId = $data['club_id'] ?? null;
         if (empty($clubId)) {
             $device = \App\Models\ClubDevice::where('device_id', $data['source_device_id'])->first();
-            $clubId = $device?->club_id ?? 'tadamon_hadhramaut';
+            $clubId = $device?->club_id;
+        }
+
+        if (empty($clubId)) {
+            $clubId = \App\Models\ClubProfile::value('id') ?? 'default_club';
         }
 
         return DispatchedSession::updateOrCreate(

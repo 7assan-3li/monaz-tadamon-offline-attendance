@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -10,12 +12,16 @@ import 'package:tadamon_attendance_app/core/theme/club_theme_service.dart';
 import 'package:tadamon_attendance_app/features/teams/domain/entities/club_team.dart';
 import 'package:tadamon_attendance_app/features/teams/presentation/bloc/teams_bloc.dart';
 import 'package:tadamon_attendance_app/features/teams/presentation/bloc/active_team_cubit.dart';
+import 'package:tadamon_attendance_app/features/players/data/datasources/excel_players_service.dart';
 import 'package:tadamon_attendance_app/features/players/domain/entities/club_player.dart';
+import 'package:tadamon_attendance_app/features/players/domain/repositories/players_repository.dart';
 import 'package:tadamon_attendance_app/features/players/presentation/bloc/players_bloc.dart';
 import 'package:tadamon_attendance_app/features/players/presentation/bloc/players_event.dart';
 import 'package:tadamon_attendance_app/features/players/presentation/bloc/players_state.dart';
 import 'package:tadamon_attendance_app/features/players/presentation/widgets/add_edit_player_modal.dart';
+import 'package:tadamon_attendance_app/features/players/presentation/widgets/excel_import_preview_sheet.dart';
 import 'package:tadamon_attendance_app/features/players/presentation/widgets/player_card.dart';
+import 'package:tadamon_attendance_app/features/reports/data/datasources/report_storage_service.dart';
 
 class PlayersListScreen extends StatefulWidget {
   const PlayersListScreen({super.key});
@@ -198,6 +204,16 @@ class _PlayersListScreenState extends State<PlayersListScreen> {
             ],
           ),
         ),
+        if (isMaster)
+          IconButton(
+            onPressed: () => _showExcelOptionsSheet(context),
+            icon: const Icon(
+              LucideIcons.fileSpreadsheet,
+              color: Colors.white,
+              size: 20,
+            ),
+            tooltip: 'إدارة كشوفات Excel',
+          ),
         IconButton(
           onPressed: () => _showNotificationsSheet(context),
           icon: const Icon(
@@ -1516,5 +1532,368 @@ class _PlayersListScreenState extends State<PlayersListScreen> {
     context.read<PlayersBloc>().add(
           player == null ? PlayerAdded(result) : PlayerUpdated(result),
         );
+  }
+
+  String _getTeamName(String teamId) {
+    if (teamId == 'all') return 'جميع الفئات';
+    try {
+      final teamsState = context.read<TeamsBloc>().state;
+      if (teamsState is TeamsReady) {
+        final found = teamsState.teams.cast<ClubTeam?>().firstWhere(
+          (t) => t?.id == teamId,
+          orElse: () => null,
+        );
+        if (found != null) return found.name;
+      }
+    } catch (_) {}
+    return switch (teamId) {
+      'team-first' => 'الفريق الأول',
+      'team-youth' => 'فريق الشباب U-19',
+      'team-junior' => 'فريق الناشئين U-17',
+      _ => teamId,
+    };
+  }
+
+  void _showExcelOptionsSheet(BuildContext context) {
+    final primaryColor = ClubThemeService.instance.currentPrimaryColor;
+    final currentTeamName = _getTeamName(_selectedTeamFilter);
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFCBD5E1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(LucideIcons.fileSpreadsheet, size: 20, color: Color(0xFF16A34A)),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'إدارة كشوفات اللاعبين (Excel)',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        'الفريق النشط: $currentTeamName',
+                        style: const TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+
+            // 1. Import Option
+            _buildExcelOptionTile(
+              context: ctx,
+              icon: LucideIcons.fileUp,
+              iconColor: primaryColor,
+              iconBgColor: primaryColor.withValues(alpha: 0.1),
+              title: 'استيراد كشف اللاعبين من ملف Excel',
+              subtitle: 'قراءة وإضافة أسماء اللاعبين وأرقامهم دفعة واحدة من ملف (.xlsx أو .xls)',
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _importPlayersFromExcel(context);
+              },
+            ),
+            const SizedBox(height: 10),
+
+            // 2. Download Template Option
+            _buildExcelOptionTile(
+              context: ctx,
+              icon: LucideIcons.fileDown,
+              iconColor: const Color(0xFF0284C7),
+              iconBgColor: const Color(0xFFE0F2FE),
+              title: 'تنزيل قالب كشف اللاعبين المعتمد',
+              subtitle: 'توليد ملف إكسل رسمي منسق مسبقاً لتعبئته ومشاركته فوراً',
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _downloadExcelTemplate(context);
+              },
+            ),
+            const SizedBox(height: 10),
+
+            // 3. Export Squad Option
+            _buildExcelOptionTile(
+              context: ctx,
+              icon: LucideIcons.share2,
+              iconColor: const Color(0xFF16A34A),
+              iconBgColor: const Color(0xFFDCFCE7),
+              title: 'تصدير كشف الفريق الحالي ($currentTeamName)',
+              subtitle: 'تصدير قائمة اللاعبين المسجلين في هذا الفريق إلى ملف Excel معتمد',
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _exportCurrentSquad(context);
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExcelOptionTile({
+    required BuildContext context,
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBgColor,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: iconBgColor,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 10.5,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(LucideIcons.chevronLeft, size: 16, color: AppColors.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _importPlayersFromExcel(BuildContext context) async {
+    try {
+      final picked = await FilePicker.pickFile(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx', 'xls'],
+      );
+      if (picked == null) return;
+      List<int>? bytes;
+      if (picked.path != null) {
+        final file = File(picked.path!);
+        if (await file.exists()) {
+          bytes = await file.readAsBytes();
+        }
+      }
+      if (bytes == null || bytes.isEmpty) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تعذر قراءة محتوى الملف المختار.', style: TextStyle(fontFamily: 'Cairo')),
+            backgroundColor: AppColors.unexcused,
+          ),
+        );
+        return;
+      }
+
+      final targetTeamId = _selectedTeamFilter != 'all' ? _selectedTeamFilter : 'team-first';
+      final teamName = _getTeamName(targetTeamId);
+      final excelService = serviceLocator<ExcelPlayersService>();
+      final importResult = excelService.parsePlayersFromExcel(bytes, defaultTeamId: targetTeamId);
+
+      if (!context.mounted) return;
+      await ExcelImportPreviewSheet.show(
+        context,
+        result: importResult,
+        teamName: teamName,
+        fileName: picked.name,
+        onConfirm: () async {
+          final repo = serviceLocator<PlayersRepository>();
+          final insertedCount = await repo.addPlayersBatch(importResult.players);
+          if (!context.mounted) return;
+          context.read<PlayersBloc>().add(const PlayersRequested());
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'تم اعتماد وإضافة $insertedCount لاعباً إلى كشف $teamName بنجاح! ✅',
+                style: const TextStyle(fontFamily: 'Cairo'),
+              ),
+              backgroundColor: const Color(0xFF16A34A),
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'خطأ في قراءة ملف الإكسل: $e',
+            style: const TextStyle(fontFamily: 'Cairo'),
+          ),
+          backgroundColor: AppColors.unexcused,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
+  }
+
+  Future<void> _downloadExcelTemplate(BuildContext context) async {
+    try {
+      final targetTeamId = _selectedTeamFilter != 'all' ? _selectedTeamFilter : 'team-first';
+      final teamName = _getTeamName(targetTeamId);
+      final clubName = ClubThemeService.instance.currentClubName;
+      final excelService = serviceLocator<ExcelPlayersService>();
+      final bytes = excelService.generateTemplate(clubName: clubName, teamName: teamName);
+
+      final storage = serviceLocator<ReportStorageService>();
+      final sanitizedTeam = teamName.replaceAll(' ', '_');
+      final fileName = 'قالب_تسجيل_اللاعبين_$sanitizedTeam.xlsx';
+      final file = await storage.saveReportFile(fileName: fileName, bytes: bytes);
+
+      await storage.shareReportFile(
+        file.path,
+        subject: 'قالب تسجيل اللاعبين - $clubName',
+        text: 'مرفق قالب تسجيل اللاعبين المعتمد لنادي $clubName ($teamName)',
+      );
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'تم توليد قالب Excel بنجاح في مجلد التنزيلات 📄',
+            style: TextStyle(fontFamily: 'Cairo'),
+          ),
+          backgroundColor: Color(0xFF0284C7),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('فشل توليد القالب: $e', style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: AppColors.unexcused,
+        ),
+      );
+    }
+  }
+
+  Future<void> _exportCurrentSquad(BuildContext context) async {
+    try {
+      final targetTeamId = _selectedTeamFilter != 'all' ? _selectedTeamFilter : 'team-first';
+      final teamName = _getTeamName(targetTeamId);
+      final clubName = ClubThemeService.instance.currentClubName;
+      final state = context.read<PlayersBloc>().state;
+      final allPlayers = state is PlayersReady ? state.players : <ClubPlayer>[];
+      final squad = targetTeamId == 'all'
+          ? allPlayers
+          : allPlayers.where((p) => p.teamId == targetTeamId).toList();
+
+      if (squad.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لا يوجد لاعبين في هذا الفريق لتصديرهم.', style: TextStyle(fontFamily: 'Cairo')),
+            backgroundColor: Color(0xFFD97706),
+          ),
+        );
+        return;
+      }
+
+      final excelService = serviceLocator<ExcelPlayersService>();
+      final bytes = excelService.exportSquadToExcel(clubName: clubName, teamName: teamName, players: squad);
+
+      final storage = serviceLocator<ReportStorageService>();
+      final sanitizedTeam = teamName.replaceAll(' ', '_');
+      final fileName = 'كشف_${clubName}_$sanitizedTeam.xlsx';
+      final file = await storage.saveReportFile(fileName: fileName, bytes: bytes);
+
+      await storage.shareReportFile(
+        file.path,
+        subject: 'كشف لاعبي $teamName - $clubName',
+        text: 'مرفق كشف لاعبي $teamName بنادي $clubName (${squad.length} لاعب)',
+      );
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'تم تصدير كشف الفريق (${squad.length} لاعب) إلى Excel بنجاح 📊',
+            style: const TextStyle(fontFamily: 'Cairo'),
+          ),
+          backgroundColor: const Color(0xFF16A34A),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('فشل تصدير الكشف: $e', style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: AppColors.unexcused,
+        ),
+      );
+    }
   }
 }

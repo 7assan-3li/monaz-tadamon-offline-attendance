@@ -30,6 +30,7 @@ import 'package:tadamon_attendance_app/features/reports/presentation/bloc/report
 import 'package:tadamon_attendance_app/features/reports/presentation/screens/reports_hub_screen.dart';
 
 import 'package:tadamon_attendance_app/core/theme/club_theme_service.dart';
+import 'package:tadamon_attendance_app/features/sync/domain/repositories/cloud_sync_repository.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -157,6 +158,34 @@ class _AppBootstrapState extends State<AppBootstrap> {
         _isUnlocked = isFieldLicense ? true : !isPinEnabled;
       });
     }
+    _triggerDirectCloudSync();
+  }
+
+  void _triggerDirectCloudSync() {
+    Future<void>.delayed(const Duration(milliseconds: 500), () async {
+      try {
+        if (!serviceLocator.isRegistered<CloudSyncRepository>()) return;
+        final repo = serviceLocator<CloudSyncRepository>();
+        final isOnline = await repo.checkConnectivity();
+        if (!isOnline) return;
+
+        final isMaster = _license?.role == ActivatedDeviceRole.masterAdmin;
+        final scope = await repo.getEffectiveDeviceScope();
+
+        // 1. Register device with cloud
+        await repo.registerDevice(
+          deviceId: widget.deviceId,
+          deviceName: isMaster ? 'جهاز الإدارة' : 'جهاز المحضر الميداني',
+          role: isMaster ? 'master_admin' : 'field_attendance',
+          clubName: _license?.clubName,
+        );
+
+        // 2. Pull official master data for this specific club
+        await repo.pullMasterData(clubId: scope.clubId);
+      } catch (_) {
+        // Silent background fallback: system remains 100% operational offline
+      }
+    });
   }
 
   @override

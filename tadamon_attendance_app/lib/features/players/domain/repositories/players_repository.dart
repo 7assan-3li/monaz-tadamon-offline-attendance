@@ -3,6 +3,7 @@ import 'package:tadamon_attendance_app/features/players/domain/entities/club_pla
 abstract interface class PlayersRepository {
   Future<List<ClubPlayer>> getActivePlayers({String query = ''});
   Future<void> addPlayer(ClubPlayer player);
+  Future<int> addPlayersBatch(List<ClubPlayer> players);
   Future<void> updatePlayer(ClubPlayer player);
   Future<void> archivePlayer(String playerId);
 }

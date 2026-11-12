@@ -63,6 +63,11 @@ class _Repository implements PlayersRepository {
   @override
   Future<void> addPlayer(ClubPlayer player) async => players.add(player);
   @override
+  Future<int> addPlayersBatch(List<ClubPlayer> newPlayers) async {
+    players.addAll(newPlayers);
+    return newPlayers.length;
+  }
+  @override
   Future<void> archivePlayer(String id) async =>
       players.removeWhere((p) => p.id == id);
   @override

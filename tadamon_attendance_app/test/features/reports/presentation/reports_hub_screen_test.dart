@@ -150,7 +150,7 @@ void main() {
     // 5. Test Month Picker Sheet
     await tester.tap(find.text('الشهر المعتمد'));
     await tester.pumpAndSettle();
-    expect(find.text('اختيار الشهر المعتمد'), findsOneWidget);
+    expect(find.text('اختيار الفترة الزمنية أو الشهر'), findsOneWidget);
     await tester.tap(find.text('سبتمبر 2026'));
     await tester.pumpAndSettle();
 

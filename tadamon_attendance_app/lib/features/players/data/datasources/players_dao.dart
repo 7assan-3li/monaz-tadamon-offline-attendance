@@ -62,6 +62,37 @@ class PlayersDao {
         );
   }
 
+  Future<int> insertBatch(List<ClubPlayer> players) async {
+    return _database.transaction(() async {
+      var count = 0;
+      for (final player in players) {
+        final existingByNumber = player.jerseyNumber != null
+            ? await findActiveByJerseyNumber(
+                teamId: player.teamId,
+                jerseyNumber: player.jerseyNumber!,
+              )
+            : null;
+
+        await _database.into(_database.players).insertOnConflictUpdate(
+              PlayersCompanion.insert(
+                id: player.id,
+                name: player.name.trim(),
+                teamId: player.teamId,
+                jerseyNumber: Value(existingByNumber != null ? null : player.jerseyNumber),
+                position: Value(player.position?.trim()),
+                joinDate: player.joinDate,
+                notes: Value(existingByNumber != null
+                    ? '${player.notes ?? ''} (تكرر رقم ${player.jerseyNumber} مع ${existingByNumber.name})'.trim()
+                    : player.notes?.trim()),
+                updatedAt: player.updatedAt,
+              ),
+            );
+        count++;
+      }
+      return count;
+    });
+  }
+
   Future<void> update(ClubPlayer player) async {
     final jerseyNumber = player.jerseyNumber;
     if (jerseyNumber != null) {

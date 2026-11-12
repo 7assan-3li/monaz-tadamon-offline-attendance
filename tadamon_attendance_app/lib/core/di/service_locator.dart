@@ -9,6 +9,7 @@ import 'package:tadamon_attendance_app/features/activation/domain/repositories/a
 import 'package:tadamon_attendance_app/features/activation/domain/usecases/activate_device_use_case.dart';
 import 'package:tadamon_attendance_app/features/activation/presentation/bloc/activation_bloc.dart';
 import 'package:tadamon_attendance_app/core/routing/device_role_guard.dart';
+import 'package:tadamon_attendance_app/features/players/data/datasources/excel_players_service.dart';
 import 'package:tadamon_attendance_app/features/players/data/datasources/players_dao.dart';
 import 'package:tadamon_attendance_app/features/players/data/repositories/players_repository_impl.dart';
 import 'package:tadamon_attendance_app/features/players/domain/repositories/players_repository.dart';
@@ -326,6 +327,7 @@ Future<void> configureMasterDependencies() async {
     ..registerLazySingleton<AuditLogDao>(() => AuditLogDao(database))
     ..registerLazySingleton<PdfReportEngine>(PdfReportEngine.new)
     ..registerLazySingleton<ExcelReportEngine>(ExcelReportEngine.new)
+    ..registerLazySingleton<ExcelPlayersService>(ExcelPlayersService.new)
     ..registerLazySingleton<ReportStorageService>(ReportStorageService.new)
     ..registerLazySingleton<CalculateEntitlementUseCase>(CalculateEntitlementUseCase.new)
     ..registerLazySingleton<ReportsRepository>(

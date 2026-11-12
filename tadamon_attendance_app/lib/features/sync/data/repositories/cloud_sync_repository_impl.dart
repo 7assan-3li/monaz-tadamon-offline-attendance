@@ -26,6 +26,7 @@ class CloudSyncRepositoryImpl implements CloudSyncRepository {
   final TeamsRepository? teamsRepository;
   final AppDatabase? database;
 
+  @override
   Future<({String deviceId, String clubId})> getEffectiveDeviceScope() async {
     String deviceId = 'field_device';
     String clubId = 'tadamon_hadhramaut';
@@ -41,6 +42,8 @@ class CloudSyncRepositoryImpl implements CloudSyncRepository {
             final cId = parsed.payload['club_id'];
             if (cId is String && cId.isNotEmpty) {
               clubId = cId;
+            } else if (licenseData.clubName.isNotEmpty) {
+              clubId = licenseData.clubName;
             }
           }
         }

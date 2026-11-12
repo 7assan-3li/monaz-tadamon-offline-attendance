@@ -2,6 +2,8 @@ import 'package:tadamon_attendance_app/features/attendance/domain/entities/atten
 import 'package:tadamon_attendance_app/features/sync/domain/entities/cloud_master_data.dart';
 
 abstract interface class CloudSyncRepository {
+  Future<({String deviceId, String clubId})> getEffectiveDeviceScope();
+
   Future<bool> checkConnectivity();
 
   Future<bool> registerDevice({

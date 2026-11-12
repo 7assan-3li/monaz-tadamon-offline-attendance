@@ -56,6 +56,11 @@ class _MemoryPlayersRepository implements PlayersRepository {
   @override
   Future<void> addPlayer(ClubPlayer player) async => players.add(player);
   @override
+  Future<int> addPlayersBatch(List<ClubPlayer> newPlayers) async {
+    players.addAll(newPlayers);
+    return newPlayers.length;
+  }
+  @override
   Future<void> archivePlayer(String playerId) async {}
   @override
   Future<List<ClubPlayer>> getActivePlayers({String query = ''}) async =>

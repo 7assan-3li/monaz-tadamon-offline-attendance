@@ -13,6 +13,10 @@ class _MockCloudSyncRepository implements CloudSyncRepository {
   bool dispatchSuccess = true;
 
   @override
+  Future<({String deviceId, String clubId})> getEffectiveDeviceScope() async =>
+      (deviceId: 'mock-dev', clubId: 'mock-club');
+
+  @override
   Future<bool> checkConnectivity() async => isOnline;
 
   @override
