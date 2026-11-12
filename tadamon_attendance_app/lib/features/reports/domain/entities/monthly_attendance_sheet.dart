@@ -75,6 +75,9 @@ final class MonthlyAttendanceSheet {
     required this.totalSessions,
     this.periodLabel = 'جميع الفترات التدريبية',
     this.sessions = const [],
+    this.dateRangeLabel,
+    this.customStartDate,
+    this.customEndDate,
   });
 
   final String teamId;
@@ -85,4 +88,7 @@ final class MonthlyAttendanceSheet {
   final int totalSessions;
   final String periodLabel;
   final List<SessionReportItem> sessions;
+  final String? dateRangeLabel;
+  final DateTime? customStartDate;
+  final DateTime? customEndDate;
 }

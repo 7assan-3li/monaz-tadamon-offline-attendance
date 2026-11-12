@@ -270,6 +270,13 @@ class ReportsRepositoryImpl implements ReportsRepository {
       _ => 'جميع الفترات التدريبية',
     };
 
+    final dateRangeLabel = _buildDateRangeLabel(
+      customStartDate: customStartDate,
+      customEndDate: customEndDate,
+      year: year,
+      month: month,
+    );
+
     return MonthlyAttendanceSheet(
       teamId: teamId,
       teamName: teamName,
@@ -279,6 +286,9 @@ class ReportsRepositoryImpl implements ReportsRepository {
       totalSessions: sessions.length,
       periodLabel: periodLabel,
       sessions: sessionItems,
+      dateRangeLabel: dateRangeLabel,
+      customStartDate: customStartDate,
+      customEndDate: customEndDate,
     );
   }
 
@@ -431,6 +441,13 @@ class ReportsRepositoryImpl implements ReportsRepository {
       _ => 'جميع الفترات التدريبية',
     };
 
+    final dateRangeLabel = _buildDateRangeLabel(
+      customStartDate: customStartDate,
+      customEndDate: customEndDate,
+      year: year,
+      month: month,
+    );
+
     return AdminSummaryReport(
       clubName: clubName,
       season: season,
@@ -441,7 +458,39 @@ class ReportsRepositoryImpl implements ReportsRepository {
       totalSessions: sessions.length,
       rows: rows,
       periodLabel: periodLabel,
+      dateRangeLabel: dateRangeLabel,
+      customStartDate: customStartDate,
+      customEndDate: customEndDate,
     );
+  }
+
+  String _buildDateRangeLabel({
+    DateTime? customStartDate,
+    DateTime? customEndDate,
+    required int year,
+    required int month,
+  }) {
+    const months = [
+      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+    ];
+    String monthName(int m) => months[(m - 1) % 12];
+
+    if (customStartDate != null) {
+      final s = customStartDate;
+      final e = customEndDate ?? customStartDate;
+      if (s.year == e.year && s.month == e.month && s.day == 1 && e.day == DateTime(e.year, e.month + 1, 0).day) {
+        return 'الشهر: ${monthName(s.month)} ${s.year}';
+      }
+      if (s.year == e.year && s.month == e.month && s.day == e.day) {
+        return 'تاريخ: ${s.day} ${monthName(s.month)} ${s.year}';
+      }
+      if (s.year == e.year && s.month == e.month) {
+        return 'الفترة: من ${s.day} إلى ${e.day} ${monthName(s.month)} ${s.year}';
+      }
+      return 'الفترة: من ${s.day}/${s.month}/${s.year} إلى ${e.day}/${e.month}/${e.year}';
+    }
+    return 'الشهر: ${monthName(month)} $year';
   }
 
   @override

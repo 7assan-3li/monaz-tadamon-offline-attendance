@@ -182,7 +182,7 @@ class PdfReportEngine {
                         style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold),
                       ),
                       pw.Text(
-                        'الشهر: ${sheet.month.month} / ${sheet.month.year}',
+                        sheet.dateRangeLabel ?? 'الشهر: ${sheet.month.month} / ${sheet.month.year}',
                         style: const pw.TextStyle(fontSize: 8.5),
                       ),
                       pw.Text(
@@ -438,7 +438,10 @@ class PdfReportEngine {
                     children: [
                       pw.Text('الفريق: ${report.teamName}', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
                       pw.Text('الموسم: ${report.season}', style: const pw.TextStyle(fontSize: 8)),
-                      pw.Text('الشهر: ${report.month.month} / ${report.month.year}', style: const pw.TextStyle(fontSize: 8)),
+                      pw.Text(
+                        report.dateRangeLabel ?? 'الشهر: ${report.month.month} / ${report.month.year}',
+                        style: const pw.TextStyle(fontSize: 8),
+                      ),
                       pw.Text(
                         'الفترة: ${report.periodLabel}',
                         style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: royalBlue),

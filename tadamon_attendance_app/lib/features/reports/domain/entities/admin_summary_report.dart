@@ -37,6 +37,9 @@ final class AdminSummaryReport {
     required this.totalSessions,
     required this.rows,
     this.periodLabel = 'جميع الفترات التدريبية',
+    this.dateRangeLabel,
+    this.customStartDate,
+    this.customEndDate,
   });
 
   final String clubName;
@@ -48,4 +51,7 @@ final class AdminSummaryReport {
   final int totalSessions;
   final List<PlayerSummaryRow> rows;
   final String periodLabel;
+  final String? dateRangeLabel;
+  final DateTime? customStartDate;
+  final DateTime? customEndDate;
 }

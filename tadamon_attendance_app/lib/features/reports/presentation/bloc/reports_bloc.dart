@@ -109,11 +109,15 @@ class ReportsBloc extends Bloc<ReportsEvent, ReportsState> {
           teamId: current.sheet.teamId,
           year: current.sheet.month.year,
           month: current.sheet.month.month,
+          customStartDate: current.sheet.customStartDate,
+          customEndDate: current.sheet.customEndDate,
         );
         final updatedSummary = await _repository.getAdminSummaryReport(
           teamId: current.sheet.teamId,
           year: current.sheet.month.year,
           month: current.sheet.month.month,
+          customStartDate: current.sheet.customStartDate,
+          customEndDate: current.sheet.customEndDate,
         );
         final updatedLogs = await _repository.getAuditLogs();
 

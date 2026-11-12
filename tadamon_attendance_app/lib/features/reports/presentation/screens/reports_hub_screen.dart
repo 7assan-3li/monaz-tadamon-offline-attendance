@@ -87,11 +87,29 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
     return _squads.firstWhere((s) => s['id'] == _selectedTeamId, orElse: () => _squads.first)['name']!;
   }
 
-  String get _currentMonthName =>
-      _months.firstWhere(
-        (m) => m['year'] == _selectedYear && m['month'] == _selectedMonth,
-        orElse: () => _months.first,
-      )['label'] as String;
+  String get _currentMonthName {
+    if (_customStartDate != null) {
+      final start = _customStartDate!;
+      final end = _customEndDate ?? start;
+      if (start.year == end.year &&
+          start.month == end.month &&
+          start.day == 1 &&
+          end.day == DateTime(end.year, end.month + 1, 0).day) {
+        return '${_getMonthName(start.month)} ${start.year}';
+      }
+      if (start.year == end.year && start.month == end.month && start.day == end.day) {
+        return '${start.day} ${_getMonthName(start.month)} ${start.year}';
+      }
+      if (start.year == end.year && start.month == end.month) {
+        return 'من ${start.day} إلى ${end.day} ${_getMonthName(start.month)} ${start.year}';
+      }
+      return 'من ${start.day}/${start.month} إلى ${end.day}/${end.month}/${end.year}';
+    }
+    return _months.firstWhere(
+      (m) => m['year'] == _selectedYear && m['month'] == _selectedMonth,
+      orElse: () => _months.first,
+    )['label'] as String;
+  }
 
   @override
   void initState() {
@@ -448,9 +466,9 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'الشهر المعتمد',
-                          style: TextStyle(
+                        Text(
+                          _customStartDate != null ? 'الفترة المعتمدة' : 'الشهر المعتمد',
+                          style: const TextStyle(
                             fontFamily: 'Cairo',
                             fontSize: 9,
                             color: AppColors.textSecondary,
@@ -935,9 +953,12 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
     final start = _customStartDate!;
     final end = _customEndDate;
     if (end == null || (start.year == end.year && start.month == end.month && start.day == end.day)) {
-      return 'تاريخ محدد: ${start.day} ${_getMonthName(start.month)} ${start.year}';
+      return 'تاريخ: ${start.day} ${_getMonthName(start.month)} ${start.year}';
     }
-    return 'من ${start.day} إلى ${end.day} ${_getMonthName(start.month)} ${start.year}';
+    if (start.year == end.year && start.month == end.month) {
+      return 'من ${start.day} إلى ${end.day} ${_getMonthName(start.month)} ${start.year}';
+    }
+    return 'من ${start.day}/${start.month} إلى ${end.day}/${end.month}/${end.year}';
   }
 
   String _getMonthName(int month) {
@@ -949,10 +970,6 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
   }
 
   void _showDateFilterDialog(BuildContext context) {
-    final daysInMonth = DateTime(_selectedYear, _selectedMonth + 1, 0).day;
-    final firstDayOfMonth = DateTime(_selectedYear, _selectedMonth, 1);
-    final lastDayOfMonth = DateTime(_selectedYear, _selectedMonth, daysInMonth);
-
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -980,9 +997,9 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                       child: Icon(LucideIcons.calendar, size: 18, color: AppColors.royalBlue),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      'تحديد تاريخ أو نطاق أيام في $_currentMonthName',
-                      style: const TextStyle(
+                    const Text(
+                      'تحديد تاريخ أو نطاق أيام التقرير',
+                      style: TextStyle(
                         fontFamily: 'Cairo',
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -1012,7 +1029,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                 style: TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.bold),
               ),
               subtitle: const Text(
-                'عرض التمارين المنفذة في يوم تدريبي معين من الشهر',
+                'عرض التمارين المنفذة في يوم تدريبي معين',
                 style: TextStyle(fontFamily: 'Cairo', fontSize: 10.5, color: AppColors.textSecondary),
               ),
               trailing: const Icon(LucideIcons.chevronLeft, size: 16),
@@ -1020,14 +1037,19 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                 Navigator.of(ctx).pop();
                 final picked = await showDatePicker(
                   context: context,
-                  initialDate: _customStartDate ?? firstDayOfMonth,
-                  firstDate: firstDayOfMonth,
-                  lastDate: lastDayOfMonth,
+                  initialDate: _customStartDate ?? DateTime(_selectedYear, _selectedMonth, 1),
+                  firstDate: DateTime(2023),
+                  lastDate: DateTime(2030),
+                  helpText: 'اختيار يوم تدريبي محدد',
+                  cancelText: 'إلغاء',
+                  confirmText: 'تأكيد',
                 );
                 if (picked != null) {
                   setState(() {
                     _customStartDate = DateTime.utc(picked.year, picked.month, picked.day);
                     _customEndDate = DateTime.utc(picked.year, picked.month, picked.day);
+                    _selectedYear = picked.year;
+                    _selectedMonth = picked.month;
                   });
                   _loadReportsData();
                 }
@@ -1048,7 +1070,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                 style: TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.bold),
               ),
               subtitle: const Text(
-                'فلترة تمارين أسبوع أو فترة معينة داخل الشهر',
+                'فلترة تمارين فترة محددة بحرية كاملة دون تقييد',
                 style: TextStyle(fontFamily: 'Cairo', fontSize: 10.5, color: AppColors.textSecondary),
               ),
               trailing: const Icon(LucideIcons.chevronLeft, size: 16),
@@ -1056,11 +1078,18 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                 Navigator.of(ctx).pop();
                 final pickedRange = await showDateRangePicker(
                   context: context,
-                  firstDate: firstDayOfMonth,
-                  lastDate: lastDayOfMonth,
+                  firstDate: DateTime(2023),
+                  lastDate: DateTime(2030),
                   initialDateRange: _customStartDate != null && _customEndDate != null
                       ? DateTimeRange(start: _customStartDate!, end: _customEndDate!)
-                      : DateTimeRange(start: firstDayOfMonth, end: lastDayOfMonth),
+                      : DateTimeRange(
+                          start: DateTime(_selectedYear, _selectedMonth, 1),
+                          end: DateTime(_selectedYear, _selectedMonth + 1, 0),
+                        ),
+                  helpText: 'تحديد نطاق أيام التقرير (من تاريخ - إلى تاريخ)',
+                  cancelText: 'إلغاء',
+                  confirmText: 'تأكيد النطاق',
+                  saveText: 'تأكيد',
                 );
                 if (pickedRange != null) {
                   setState(() {
@@ -1074,6 +1103,8 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                       pickedRange.end.month,
                       pickedRange.end.day,
                     );
+                    _selectedYear = pickedRange.start.year;
+                    _selectedMonth = pickedRange.start.month;
                   });
                   _loadReportsData();
                 }
@@ -2578,7 +2609,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2588,7 +2619,7 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                     icon: const Icon(LucideIcons.x),
                   ),
                   const Text(
-                    'اختيار الشهر المعتمد',
+                    'اختيار الفترة الزمنية أو الشهر',
                     style: TextStyle(
                       fontFamily: 'Cairo',
                       fontSize: 16,
@@ -2598,7 +2629,242 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                   ),
                 ],
               ),
-              const Divider(height: 20),
+              const Divider(height: 16),
+
+              // 1. Primary Highlight Card: Custom Date Range (من - إلى)
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.royalBlue,
+                      AppColors.royalBlue.withValues(alpha: 0.88),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.royalBlue.withValues(alpha: 0.25),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () async {
+                      Navigator.of(ctx).pop();
+                      final initialRange = _customStartDate != null && _customEndDate != null
+                          ? DateTimeRange(start: _customStartDate!, end: _customEndDate!)
+                          : DateTimeRange(
+                              start: DateTime(_selectedYear, _selectedMonth, 1),
+                              end: DateTime(_selectedYear, _selectedMonth + 1, 0),
+                            );
+                      final pickedRange = await showDateRangePicker(
+                        context: context,
+                        firstDate: DateTime(2023),
+                        lastDate: DateTime(2030),
+                        initialDateRange: initialRange,
+                        helpText: 'تحديد الفترة الزمنية للتقرير (من تاريخ - إلى تاريخ)',
+                        cancelText: 'إلغاء',
+                        confirmText: 'تأكيد الفترة',
+                        saveText: 'تأكيد',
+                      );
+                      if (pickedRange != null) {
+                        setState(() {
+                          _customStartDate = DateTime.utc(
+                            pickedRange.start.year,
+                            pickedRange.start.month,
+                            pickedRange.start.day,
+                          );
+                          _customEndDate = DateTime.utc(
+                            pickedRange.end.year,
+                            pickedRange.end.month,
+                            pickedRange.end.day,
+                          );
+                          _selectedYear = pickedRange.start.year;
+                          _selectedMonth = pickedRange.start.month;
+                        });
+                        _loadReportsData();
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(LucideIcons.calendarRange, color: Colors.white, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'تحديد فترة مخصصة (من - إلى)',
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                Text(
+                                  'اختيار أي نطاق تاريخ حر باليوم والشهر والسنة',
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 10.5,
+                                    color: Color(0xFFE2E8F0),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(LucideIcons.chevronLeft, color: Colors.white, size: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // 2. Active custom range banner (if selected)
+              if (_customStartDate != null)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.4)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(LucideIcons.checkCircle2, color: AppColors.royalBlue, size: 16),
+                          const SizedBox(width: 6),
+                          Text(
+                            'الفترة المحددة: ${_buildDateFilterLabel()}',
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.royalBlue,
+                            ),
+                          ),
+                        ],
+                      ),
+                      InkWell(
+                        onTap: () {
+                          Navigator.of(ctx).pop();
+                          _clearDateFilter();
+                        },
+                        child: const Text(
+                          'إلغاء الفترة',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.unexcused,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // 3. Quick preset chips
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  _buildQuickPresetChip(
+                    label: 'هذا الشهر',
+                    ctx: ctx,
+                    onTap: () {
+                      final now = DateTime.now();
+                      final start = DateTime.utc(now.year, now.month, 1);
+                      final end = DateTime.utc(now.year, now.month + 1, 0);
+                      setState(() {
+                        _selectedYear = now.year;
+                        _selectedMonth = now.month;
+                        _customStartDate = start;
+                        _customEndDate = end;
+                      });
+                      _loadReportsData();
+                    },
+                  ),
+                  _buildQuickPresetChip(
+                    label: 'الشهر السابق',
+                    ctx: ctx,
+                    onTap: () {
+                      final now = DateTime.now();
+                      final prevMonth = DateTime(now.year, now.month - 1, 1);
+                      final start = DateTime.utc(prevMonth.year, prevMonth.month, 1);
+                      final end = DateTime.utc(prevMonth.year, prevMonth.month + 1, 0);
+                      setState(() {
+                        _selectedYear = prevMonth.year;
+                        _selectedMonth = prevMonth.month;
+                        _customStartDate = start;
+                        _customEndDate = end;
+                      });
+                      _loadReportsData();
+                    },
+                  ),
+                  _buildQuickPresetChip(
+                    label: 'آخر 30 يوماً',
+                    ctx: ctx,
+                    onTap: () {
+                      final now = DateTime.now();
+                      final start = now.subtract(const Duration(days: 30));
+                      setState(() {
+                        _customStartDate = DateTime.utc(start.year, start.month, start.day);
+                        _customEndDate = DateTime.utc(now.year, now.month, now.day);
+                        _selectedYear = start.year;
+                        _selectedMonth = start.month;
+                      });
+                      _loadReportsData();
+                    },
+                  ),
+                  _buildQuickPresetChip(
+                    label: 'آخر 7 أيام',
+                    ctx: ctx,
+                    onTap: () {
+                      final now = DateTime.now();
+                      final start = now.subtract(const Duration(days: 7));
+                      setState(() {
+                        _customStartDate = DateTime.utc(start.year, start.month, start.day);
+                        _customEndDate = DateTime.utc(now.year, now.month, now.day);
+                        _selectedYear = start.year;
+                        _selectedMonth = start.month;
+                      });
+                      _loadReportsData();
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              const Text(
+                'أو اختيار شهر تقويمي محدد:',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 8),
+
               for (final m in _months)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -2662,6 +2928,37 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                   ),
                 ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickPresetChip({
+    required String label,
+    required BuildContext ctx,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: () {
+        Navigator.of(ctx).pop();
+        onTap();
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.canvas,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.borderSubtle),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
           ),
         ),
       ),

@@ -17,7 +17,7 @@ class ExcelReportEngine {
 
     // 2. Report Metadata Sub-header
     sheet.appendRow([
-      TextCellValue('كشف التحضير وخلاصة الإداري الرسمية | الموسم: ${report.season} | الفريق: ${report.teamName} | الشهر: ${report.month.month} / ${report.month.year} | الفترة: ${report.periodLabel}'),
+      TextCellValue('كشف التحضير وخلاصة الإداري الرسمية | الموسم: ${report.season} | الفريق: ${report.teamName} | ${report.dateRangeLabel ?? 'الشهر: ${report.month.month} / ${report.month.year}'} | الفترة: ${report.periodLabel}'),
     ]);
 
     // 3. Operational KPIs Row
